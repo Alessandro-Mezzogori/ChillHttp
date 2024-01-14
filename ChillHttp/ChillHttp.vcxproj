@@ -132,11 +132,13 @@
     <ClCompile Include="http.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="log\log.c" />
+    <ClCompile Include="thread.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="hashtable.h" />
     <ClInclude Include="http.h" />
     <ClInclude Include="log\log.h" />
+    <ClInclude Include="thread.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

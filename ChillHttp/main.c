@@ -3,8 +3,7 @@
 #include "log/log.h"
 #include "hashtable.h"
 #include "http.h"
-#include <windows.h>
-#include <winsock2.h>
+#include "thread.h"
 #include <ws2tcpip.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -19,25 +18,6 @@
 #define DEFAULT_PORT "27015"
 #define MAX_CONCURRENT_THREADS 5
 
-typedef struct MainThreadData MTData, *PMTData;
-typedef struct SocketThreadData SOCKTD, *PSOCKTD;
-
-struct SocketThreadData {
-	int threadId;
-	SOCKET socket;
-	BOOL isActive;
-	PMTData pmtData;
-};
-
-struct MainThreadData {
-	SOCKET serverSocket;
-	DWORD* dwThreadIdArray;
-	HANDLE* hThreadArray;
-	PSOCKTD* pdataThreadArray;
-	BOOL isRunning;
-	unsigned int activeThreadCount;
-	char* servingFolder;
-};
 
 void freeMainThreadData(PMTData data) {
 	if (data == NULL) {
@@ -98,152 +78,6 @@ DWORD cleanupThreadFunction(void* lpParam) {
 	return 0;
 }
 
-DWORD threadFunction(void* lpParam) {
-	PSOCKTD pdata = (PSOCKTD)lpParam;
-	PMTData mtData = pdata->pmtData;
-	int threadId = pdata->threadId;
-	SOCKET socket = pdata->socket;
-
-	LOG_INFO("Thread {%d} socket: {%d} initiliazed", threadId, socket);
-
-	size_t servingFolderLength = strlen(mtData->servingFolder);
-
-	int connectionResult = 0;
-	char buffer[1024];
-	memset(buffer, 0, sizeof(buffer));
-	do {
-		connectionResult = recv(socket, buffer, sizeof(buffer), 0);
-		if (connectionResult > 0) {
-			LOG_INFO("Socket {%d} bytes received: %d", socket, connectionResult);
-			LOG_INFO("Socket {%d}\r\nMessage: %s", socket, &buffer);
-
-			HttpRequest* request = parseHttpRequest(buffer);
-
-			HashEntry* connection = hashtableLookup(request->headers, "Connection");
-			if(connection != NULL && strcmp(connection->value, "close") == 0) {
-				connectionResult = 0;
-				LOG_INFO("Socket {%d} closing connection", socket);
-			}
-
-			// read path
-			char* path = strdup(request->path);
-			size_t pathLength = strlen(path);
-			if(request->path[pathLength - 1] == '/') {
-				pathLength += 10;
-
-				char* tempPath = (char*) realloc(path, pathLength + 1);
-				if(tempPath == NULL) {
-					// TODO cleanup e shutdown request with error 505
-					free(path);
-					return 1;
-				}
-
-				path = tempPath;
-				strcat_s(path, pathLength + 1, "index.html");
-			}
-
-			size_t filePathLength = servingFolderLength + pathLength + 1;
-			char* filePath = (char*) calloc(filePathLength, sizeof(char));
-			strcat_s(filePath, filePathLength, mtData->servingFolder);
-			strcat_s(filePath, filePathLength, path);
-
-			FILE* file = fopen(filePath, "r");
-			if(file == NULL) {
-				LOG_ERROR("File {%s} not found", filePath);
-				// TODO cleanup e shutdown request with error 404
-				free(filePath);
-				freeHttpRequest(request);
-				return 1;
-			}
-
-			const fileBufferInitialSize = 10;
-			int currentContentCapacity = fileBufferInitialSize;
-			char* contentBuffer = (char*) malloc(currentContentCapacity * sizeof(char));
-			char* currentBufferPointer = contentBuffer;
-			while(TRUE)
-			{
-				long elementsRead = fread(currentBufferPointer, 1, fileBufferInitialSize, file);
-				currentBufferPointer += elementsRead;
-
-				if (elementsRead < fileBufferInitialSize) {
-					break;
-				}
-
-				size_t contentEnd = currentBufferPointer - contentBuffer;
-				if (contentEnd >= currentContentCapacity) {
-					currentContentCapacity *= 2;
-					contentBuffer = (char*) realloc(contentBuffer, (currentContentCapacity + 1) * sizeof(char));
-					currentBufferPointer = contentBuffer + contentEnd;
-				}
-			}
-
-			size_t contentLength = currentBufferPointer - contentBuffer;
-			contentBuffer[contentLength] = '\0';
-
-			fclose(file);
-
-			char* headersBuffer = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n";
-
-			char contentLengthBuffer[64];
-			memset(contentLengthBuffer, 0, sizeof(contentLengthBuffer));
-			sprintf_s(contentLengthBuffer, sizeof(contentLengthBuffer), "Content-Length: %ld\r\n", contentLength);
-
-			int contentLengthBufferLength = (int)strlen(contentLengthBuffer);
-			int headersBufferLength = (int)strlen(headersBuffer);
-			int responseBufferLength = headersBufferLength + contentLengthBufferLength + contentLength + 2;
-			char* responseBuffer = (char*)malloc((responseBufferLength + 1)*sizeof(char));
-
-			memcpy_s(responseBuffer, responseBufferLength, headersBuffer, headersBufferLength);
-			memcpy_s(responseBuffer + headersBufferLength, responseBufferLength, contentLengthBuffer, contentLengthBufferLength);
-			memcpy_s(responseBuffer + headersBufferLength + contentLengthBufferLength, responseBufferLength, "\r\n", 2);
-			memcpy_s(responseBuffer + headersBufferLength + contentLengthBufferLength + 2, responseBufferLength, contentBuffer, contentLength);
-			responseBuffer[responseBufferLength] = '\0';
-
-			int sendResult = send(socket, responseBuffer, responseBufferLength, 0);
-
-			if(sendResult == SOCKET_ERROR) {
-				LOG_FATAL("Socket {%d} send failed: %d", socket, WSAGetLastError());
-				closesocket(socket);
-				free(responseBuffer);
-				free(contentBuffer);
-				free(filePath);
-				freeHttpRequest(request);
-				WSACleanup();
-				return 1;
-			}
-
-			LOG_INFO("Socket {%d} bytes sent: %d", socket, sendResult);
-			LOG_INFO("Socket:{%d} Message:\r\n%s", socket, responseBuffer);
-
-			free(responseBuffer);
-			free(contentBuffer);
-			free(filePath);
-			freeHttpRequest(request);
-		}
-		else if (connectionResult == 0) {
-			LOG_INFO("Socket {%d} connection closing...", socket);
-		}
-		else {
-			LOG_FATAL("Socket {%d} cecv failed: %d", socket, WSAGetLastError());
-			closesocket(socket);
-			WSACleanup();
-			return 1;
-		}
-	} while (connectionResult > 0);
-
-	if (shutdown(socket, SD_SEND) == SOCKET_ERROR) {
-		LOG_FATAL("Socket {%d} Shutdown failed: %d", socket, WSAGetLastError());
-		closesocket(socket);
-		WSACleanup();
-		return 1;
-	}
-
-	LOG_TRACE("Closing thread {%d} socket {%d}", threadId, socket);
-	closesocket(socket);
-
-	pdata->isActive = FALSE;
-	return 0;
-}
 
 int main() { 
 	setlocale(LC_ALL, "");
