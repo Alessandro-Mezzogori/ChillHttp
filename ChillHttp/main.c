@@ -1,6 +1,8 @@
 #define WIN32_LEAN_AND_MEAN
 
 #include "log/log.h"
+#include "hashtable.h"
+#include "http.h"
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -100,6 +102,10 @@ DWORD threadFunction(void *lpParam) {
 			LOG_INFO("Socket {%d} bytes received: %d", socket, connectionResult);
 			LOG_INFO("Socket {%d}\r\nMessage: %s", socket, &buffer);
 
+			HttpRequest* request = parseHttpRequest(buffer);
+
+			freeHttpRequest(request);
+
 			static char* headersBuffer =
 				"HTTP/1.1 200 OK\r\n"
 				"Content-Type: text/html\r\n";
@@ -107,7 +113,7 @@ DWORD threadFunction(void *lpParam) {
 			static char* contentBuffer =
 				"<html>\r\n"
 				"<body>\r\n"
-				"<h1>Ciao topi!</h1>\r\n"
+				"<h1>Hello world</h1>\r\n"
 				"</body>\r\n"
 				"</html>\r\n";
 
@@ -283,7 +289,6 @@ int main() {
 	}
 
 	LOG_FLUSH();
-
 
 	for(int i = 0; i < MAX_CONCURRENT_THREADS; i++) {
 		if (hThreadArray[i] != NULL) {

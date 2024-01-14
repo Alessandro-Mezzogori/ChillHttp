@@ -21,7 +21,10 @@
     <ClCompile Include="log\log.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="html.c">
+    <ClCompile Include="http.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="hashtable.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -29,7 +32,10 @@
     <ClInclude Include="log\log.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="html.h">
+    <ClInclude Include="http.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="hashtable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
