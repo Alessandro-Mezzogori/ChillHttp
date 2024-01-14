@@ -34,4 +34,3 @@ typedef struct HttpRequest {
 
 HttpRequest* parseHttpRequest(const char* request);
 void freeHttpRequest(HttpRequest* request);
-void sanitizeHttpRequest(HttpRequest* request);

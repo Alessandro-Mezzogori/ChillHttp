@@ -47,6 +47,21 @@ HTTP_VERSION parseHttpVersion(char* version) {
 
 }
 
+int sanitizeHttpRequest(HttpRequest* request) {
+	char* foundFolderBack = strstr(request->path, "..");
+	if (foundFolderBack) {
+		free(request->path);
+		request->path = calloc(2, sizeof(char));
+		if(request->path == NULL) {
+			return -1;
+		}
+
+		strcpy_s(request->path, 2*sizeof(char), "/");
+	};
+
+	return 0;
+}
+
 HttpRequest* parseHttpRequest(const char* request) {
 	HttpRequest* req = (HttpRequest*) malloc(sizeof(HttpRequest) * 1);
 	if(req == NULL) {
@@ -115,7 +130,13 @@ HttpRequest* parseHttpRequest(const char* request) {
 
 	free(requestCopy);
 
-	sanitizeHttpRequest(req);
+	// TODO errror handling
+	int sanitizeResult = sanitizeHttpRequest(req);
+	if(sanitizeResult != 0) {
+		freeHttpRequest(req);
+		return NULL;
+	}
+
 	return req;
 }
 
@@ -124,13 +145,4 @@ void freeHttpRequest(HttpRequest* request) {
 	hashtableFree(request->headers);
 	free(request->body);
 	free(request);
-}
-
-void sanitizeHttpRequest(HttpRequest* request) {
-	char* foundFolderBack = strstr(request->path, "..");
-	if (foundFolderBack) {
-		free(request->path);
-		request->path = calloc(2, sizeof(char));
-		strcpy_s(request->path, 2*sizeof(char), "/");
-	};
 }

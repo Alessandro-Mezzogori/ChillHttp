@@ -19,42 +19,54 @@
 #define DEFAULT_PORT "27015"
 #define MAX_CONCURRENT_THREADS 5
 
-typedef struct SocketThreadData {
+typedef struct MainThreadData MTData, *PMTData;
+typedef struct SocketThreadData SOCKTD, *PSOCKTD;
+
+struct SocketThreadData {
 	int threadId;
 	SOCKET socket;
 	BOOL isActive;
-} SOCKTD, *PSOCKTD;
+	PMTData pmtData;
+};
 
-typedef struct MainThreadData {
+struct MainThreadData {
 	SOCKET serverSocket;
-	DWORD dwThreadIdArray[MAX_CONCURRENT_THREADS];
-	HANDLE hThreadArray[MAX_CONCURRENT_THREADS];
-	PSOCKTD pdataThreadArray[MAX_CONCURRENT_THREADS];
-	BOOL isRunning; 
+	DWORD* dwThreadIdArray;
+	HANDLE* hThreadArray;
+	PSOCKTD* pdataThreadArray;
+	BOOL isRunning;
 	unsigned int activeThreadCount;
-} MTData, *PMTData;
+	char* servingFolder;
+};
 
 void freeMainThreadData(PMTData data) {
-	if (data != NULL) {
-		if (data->serverSocket != NULL) {
-			closesocket(data->serverSocket);
-		}
+	if (data == NULL) {
+		return;
+	}
 
-		for(int i = 0; i < MAX_CONCURRENT_THREADS; i++) {
+	if(data->hThreadArray != NULL) {
+		for (int i = 0; i < MAX_CONCURRENT_THREADS; i++) {
 			if (data->hThreadArray[i] != NULL) {
 				CloseHandle(data->hThreadArray[i]);
 			}
-
-			if (data->pdataThreadArray[i] != NULL) {
-				free(data->pdataThreadArray[i]);
-			}
 		}
-
-		free(data);
 	}
+
+	if(data->pdataThreadArray != NULL) {
+		for (int i = 0; i < MAX_CONCURRENT_THREADS; i++) {
+			free(data->pdataThreadArray[i]);
+		}
+	}
+
+	closesocket(data->serverSocket);
+	free(data->dwThreadIdArray);
+	free(data->hThreadArray);
+	free(data->pdataThreadArray);
+	free(data->servingFolder);
+	free(data);
 }
 
-DWORD cleanupThreadFunction(void *lpParam) {
+DWORD cleanupThreadFunction(void* lpParam) {
 	PMTData pdata = (PMTData)lpParam;
 
 	LOG_TRACE("Cleanup thread initialized");
@@ -86,12 +98,15 @@ DWORD cleanupThreadFunction(void *lpParam) {
 	return 0;
 }
 
-DWORD threadFunction(void *lpParam) {
+DWORD threadFunction(void* lpParam) {
 	PSOCKTD pdata = (PSOCKTD)lpParam;
+	PMTData mtData = pdata->pmtData;
 	int threadId = pdata->threadId;
 	SOCKET socket = pdata->socket;
 
 	LOG_INFO("Thread {%d} socket: {%d} initiliazed", threadId, socket);
+
+	size_t servingFolderLength = strlen(mtData->servingFolder);
 
 	int connectionResult = 0;
 	char buffer[1024];
@@ -110,42 +125,100 @@ DWORD threadFunction(void *lpParam) {
 				LOG_INFO("Socket {%d} closing connection", socket);
 			}
 
-			freeHttpRequest(request);
+			// read path
+			char* path = strdup(request->path);
+			size_t pathLength = strlen(path);
+			if(request->path[pathLength - 1] == '/') {
+				pathLength += 10;
 
-			static char* headersBuffer =
-				"HTTP/1.1 200 OK\r\n"
-				"Content-Type: text/html\r\n";
+				char* tempPath = (char*) realloc(path, pathLength + 1);
+				if(tempPath == NULL) {
+					// TODO cleanup e shutdown request with error 505
+					free(path);
+					return 1;
+				}
 
-			static char* contentBuffer =
-				"<html>\r\n"
-				"<body>\r\n"
-				"<h1>Hello world</h1>\r\n"
-				"</body>\r\n"
-				"</html>\r\n";
+				path = tempPath;
+				strcat_s(path, pathLength + 1, "index.html");
+			}
 
-			size_t contentLength = strlen(contentBuffer);
+			size_t filePathLength = servingFolderLength + pathLength + 1;
+			char* filePath = (char*) calloc(filePathLength, sizeof(char));
+			strcat_s(filePath, filePathLength, mtData->servingFolder);
+			strcat_s(filePath, filePathLength, path);
+
+			FILE* file = fopen(filePath, "r");
+			if(file == NULL) {
+				LOG_ERROR("File {%s} not found", filePath);
+				// TODO cleanup e shutdown request with error 404
+				free(filePath);
+				freeHttpRequest(request);
+				return 1;
+			}
+
+			const fileBufferInitialSize = 10;
+			int currentContentCapacity = fileBufferInitialSize;
+			char* contentBuffer = (char*) malloc(currentContentCapacity * sizeof(char));
+			char* currentBufferPointer = contentBuffer;
+			while(TRUE)
+			{
+				long elementsRead = fread(currentBufferPointer, 1, fileBufferInitialSize, file);
+				currentBufferPointer += elementsRead;
+
+				if (elementsRead < fileBufferInitialSize) {
+					break;
+				}
+
+				size_t contentEnd = currentBufferPointer - contentBuffer;
+				if (contentEnd >= currentContentCapacity) {
+					currentContentCapacity *= 2;
+					contentBuffer = (char*) realloc(contentBuffer, (currentContentCapacity + 1) * sizeof(char));
+					currentBufferPointer = contentBuffer + contentEnd;
+				}
+			}
+
+			size_t contentLength = currentBufferPointer - contentBuffer;
+			contentBuffer[contentLength] = '\0';
+
+			fclose(file);
+
+			char* headersBuffer = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n";
+
 			char contentLengthBuffer[64];
 			memset(contentLengthBuffer, 0, sizeof(contentLengthBuffer));
-			sprintf_s(contentLengthBuffer, sizeof(contentLengthBuffer), "Content-Length: %zu\r\n", contentLength);
+			sprintf_s(contentLengthBuffer, sizeof(contentLengthBuffer), "Content-Length: %ld\r\n", contentLength);
 
-			char responseBuffer[1024];
-			memset(responseBuffer, 0, sizeof(responseBuffer));
-			strcat_s(responseBuffer, sizeof(responseBuffer), headersBuffer);
-			strcat_s(responseBuffer, sizeof(responseBuffer), contentLengthBuffer);
-			strcat_s(responseBuffer, sizeof(responseBuffer), "\r\n");
-			strcat_s(responseBuffer, sizeof(responseBuffer), contentBuffer);
+			int contentLengthBufferLength = (int)strlen(contentLengthBuffer);
+			int headersBufferLength = (int)strlen(headersBuffer);
+			int responseBufferLength = headersBufferLength + contentLengthBufferLength + contentLength + 2;
+			char* responseBuffer = (char*)malloc((responseBufferLength + 1)*sizeof(char));
 
-			size_t responseBufferLength = strlen(responseBuffer);
+			memcpy_s(responseBuffer, responseBufferLength, headersBuffer, headersBufferLength);
+			memcpy_s(responseBuffer + headersBufferLength, responseBufferLength, contentLengthBuffer, contentLengthBufferLength);
+			memcpy_s(responseBuffer + headersBufferLength + contentLengthBufferLength, responseBufferLength, "\r\n", 2);
+			memcpy_s(responseBuffer + headersBufferLength + contentLengthBufferLength + 2, responseBufferLength, contentBuffer, contentLength);
+			responseBuffer[responseBufferLength] = '\0';
+
 			int sendResult = send(socket, responseBuffer, responseBufferLength, 0);
+
 			if(sendResult == SOCKET_ERROR) {
 				LOG_FATAL("Socket {%d} send failed: %d", socket, WSAGetLastError());
 				closesocket(socket);
+				free(responseBuffer);
+				free(contentBuffer);
+				free(filePath);
+				freeHttpRequest(request);
 				WSACleanup();
 				return 1;
 			}
 
 			LOG_INFO("Socket {%d} bytes sent: %d", socket, sendResult);
 			LOG_INFO("Socket:{%d} Message:\r\n%s", socket, responseBuffer);
+
+			free(responseBuffer);
+			free(contentBuffer);
+			free(filePath);
+			freeHttpRequest(request);
 		}
 		else if (connectionResult == 0) {
 			LOG_INFO("Socket {%d} connection closing...", socket);
@@ -203,11 +276,17 @@ int main() {
 		return 1;
 	}
 
+	char SERVING_FOLDER[] = "D:\\Projects\\ChillHttp\\ChillHttp\\wwwroot";
+
+	size_t servingFolderLength = strlen(SERVING_FOLDER);
+	mtData->servingFolder = (char*) calloc(servingFolderLength + 1, sizeof(char));
+	strcpy_s(mtData->servingFolder, servingFolderLength + 1, SERVING_FOLDER); // could use memcpy here
+
 	mtData->isRunning = TRUE;
 	mtData->activeThreadCount = 0;
-	memset(mtData->dwThreadIdArray, 0, sizeof(DWORD)*MAX_CONCURRENT_THREADS);
-	memset(mtData->hThreadArray, 0, sizeof(HANDLE)*MAX_CONCURRENT_THREADS);
-	memset(mtData->pdataThreadArray, 0, sizeof(PSOCKTD)*MAX_CONCURRENT_THREADS);
+	mtData->dwThreadIdArray = calloc(MAX_CONCURRENT_THREADS, sizeof(DWORD));
+	mtData->hThreadArray= calloc(MAX_CONCURRENT_THREADS, sizeof(HANDLE));
+	mtData->pdataThreadArray= calloc(MAX_CONCURRENT_THREADS, sizeof(PSOCKTD));
 
 	mtData->serverSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
 	SOCKET serverSocket = mtData->serverSocket;
@@ -280,6 +359,10 @@ int main() {
 			pdata->socket = clientSocket;
 			pdata->isActive = TRUE;
 
+			// idk if it's the best way to do it, for now it's fine
+			// TODO find better way to pass env data to thread
+			pdata->pmtData = mtData;
+
 			hThreadArray[availableThreadIndex] = CreateThread(NULL, 0, threadFunction, pdata, 0, &dwThreadIdArray[availableThreadIndex]);
 			mtData->activeThreadCount += 1;
 			LOG_TRACE("Active thread count: %d", mtData->activeThreadCount);
@@ -305,13 +388,6 @@ int main() {
 	mtData->isRunning = FALSE;
 	WaitForSingleObject(cleanupThread, INFINITE);
 	CloseHandle(cleanupThread);
-
-	for(int i = 0; i < MAX_CONCURRENT_THREADS; i++) {
-		if (pdataThreadArray[i] != NULL) {
-			LOG_DEBUG("Freeing thread data {%d}", i);
-			free(pdataThreadArray[i]);
-		}
-	}
 
 	closesocket(serverSocket);
 	WSACleanup();
