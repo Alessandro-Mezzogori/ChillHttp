@@ -2,6 +2,7 @@
 
 #include "hashtable.h"
 #include<stdlib.h>
+#include<ctype.h>
 
 typedef enum HTTP_METHOD {
 	HTTP_UNKNOWN,
@@ -33,3 +34,4 @@ typedef struct HttpRequest {
 
 HttpRequest* parseHttpRequest(const char* request);
 void freeHttpRequest(HttpRequest* request);
+void sanitizeHttpRequest(HttpRequest* request);

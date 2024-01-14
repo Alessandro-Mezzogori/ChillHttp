@@ -104,6 +104,12 @@ DWORD threadFunction(void *lpParam) {
 
 			HttpRequest* request = parseHttpRequest(buffer);
 
+			HashEntry* connection = hashtableLookup(request->headers, "Connection");
+			if(connection != NULL && strcmp(connection->value, "close") == 0) {
+				connectionResult = 0;
+				LOG_INFO("Socket {%d} closing connection", socket);
+			}
+
 			freeHttpRequest(request);
 
 			static char* headersBuffer =

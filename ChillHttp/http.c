@@ -94,6 +94,16 @@ HttpRequest* parseHttpRequest(const char* request) {
 		*delimiter = '\0';
 		delimiter++;
 
+		while (isspace(*delimiter)) {
+			delimiter++;
+		}
+
+		char* end = requestCopyNextToken - 2;
+		while(isspace(*end)) {
+			*end = '\0';
+			end--;
+		}
+
 		hashtableAdd(req->headers, header, delimiter);
 		header = strtok_s(NULL, "\r\n", &requestCopyNextToken);
 	};
@@ -104,6 +114,8 @@ HttpRequest* parseHttpRequest(const char* request) {
 	}
 
 	free(requestCopy);
+
+	sanitizeHttpRequest(req);
 	return req;
 }
 
@@ -112,4 +124,13 @@ void freeHttpRequest(HttpRequest* request) {
 	hashtableFree(request->headers);
 	free(request->body);
 	free(request);
+}
+
+void sanitizeHttpRequest(HttpRequest* request) {
+	char* foundFolderBack = strstr(request->path, "..");
+	if (foundFolderBack) {
+		free(request->path);
+		request->path = calloc(2, sizeof(char));
+		strcpy_s(request->path, 2*sizeof(char), "/");
+	};
 }
