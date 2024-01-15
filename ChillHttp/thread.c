@@ -119,102 +119,80 @@ DWORD threadFunction(void* lpParam) {
 	LOG_INFO("Thread {%d} socket: {%d} initiliazed", threadId, socket);
 
 	size_t servingFolderLength = strlen(mtData->servingFolder);
-
-	int connectionResult = 0;
-	char buffer[8192]; // TODO dynamic recv buffer that can read chunked http data
-	memset(buffer, 0, sizeof(buffer));
+	bool continueConnection = true;
 	do {
-		// TODO handle chunked data
-		// specification https://stackoverflow.com/questions/49821687/how-to-determine-if-i-received-entire-message-from-recv-calls
-		// TLDR
-		// - read heading ( till \r\n )
-		// - read headers ( till \r\n\r\n )
-		// - analyze headers to determine if response body is present
-		// - read body based on the 5 ways 
-		connectionResult = recv(socket, buffer, sizeof(buffer), 0);
-		if (connectionResult > 0) {
-			LOG_INFO("Socket {%d} bytes received: %d", socket, connectionResult);
-			LOG_INFO("Socket {%d}\r\nMessage: %s", socket, &buffer);
+		HttpRequest request;
+		errno_t err = recvRequest(socket, &request);
+		if (err != 0) {
+			LOG_ERROR("Error while receiving request: %d", err);
+			break;
+		}
+			
+		HashEntry* connection = hashtableLookup(request.headers, "Connection");
+		if (connection != NULL && strcmp(connection->value, "close") == 0) {
+			continueConnection = false;
+			LOG_INFO("Socket {%d} closing connection", socket);
+		}
 
-			HttpRequest* request = parseHttpRequest(buffer);
+		// read path
+		FILE* file = openServingFolderFile(mtData->servingFolder, servingFolderLength, request.path);
+		if (file == NULL) {
+			LOG_ERROR("Path %s not found", request.path);
+			LOG_ERROR("File error {%s}", file);
 
-			HashEntry* connection = hashtableLookup(request->headers, "Connection");
-			if(connection != NULL && strcmp(connection->value, "close") == 0) {
-				connectionResult = 0;
-				LOG_INFO("Socket {%d} closing connection", socket);
-			}
+			// TODO cleanup e shutdown request with error 404
+			freeHttpRequest(&request);
+			return 1;
+		}
 
-			// read path
-			FILE* file = openServingFolderFile(mtData->servingFolder, servingFolderLength, request->path);
-			if(file == NULL) {
-				LOG_ERROR("Path %s not found", request->path);
-				LOG_ERROR("File error {%s}", file);
+		char* fileContent = NULL;
+		errno_t readErr = readTxtFile(file, &fileContent, 4096);
+		fclose(file);
 
-				// TODO cleanup e shutdown request with error 404
-				freeHttpRequest(request);
-				return 1;
-			}
+		if (readErr != 0) {
+			LOG_ERROR("Error while reading file: %s (readTxtFile error) %d", request.path, readErr);
+			freeHttpRequest(&request);
+			return 1;
+		}
 
-			char* fileContent = NULL;
-			errno_t readErr = readTxtFile(file, &fileContent, 4096);
-			fclose(file);
+		// takes ownership of fileContent
+		HttpResponse* response = createHttpResponse(request.version, 200, NULL, fileContent);
+		if (response == NULL) {
+			LOG_ERROR("Error while creating response");
+			freeHttpRequest(&request);
+			free(fileContent);
+			return 1;
+		}
 
-			if (readErr != 0) {
-				LOG_ERROR("Error while reading file: %s (readTxtFile error) %d", request->path, readErr);
-				freeHttpRequest(request);
-				return 1;
-			}
+		size_t responseBufferLen = 0;
+		char* responseBuffer;
+		errno_t buildErr = buildHttpResponse(response, &responseBuffer, &responseBufferLen);
+		if (buildErr != 0) {
+			LOG_ERROR("Error while building response: %d", buildErr);
+			freeHttpRequest(&request);
+			freeHttpResponse(response);
+			return 1;
+		}
 
-			// takes ownership of fileContent
-			HttpResponse* response = createHttpResponse(request->version, 200, NULL, fileContent);
-			if(response == NULL) {
-				LOG_ERROR("Error while creating response");
-				freeHttpRequest(request);
-				free(fileContent);
-				return 1;
-			}
-
-			size_t responseBufferLen = 0;
-			char* responseBuffer;
-			errno_t buildErr = buildHttpResponse(response, &responseBuffer, &responseBufferLen);
-			if(buildErr != 0) {
-				LOG_ERROR("Error while building response: %d", buildErr);
-				freeHttpRequest(request);
-				freeHttpResponse(response);
-				return 1;
-			}
-
-			int sendResult = send(socket, responseBuffer, responseBufferLen, 0);
-
-
-			if(sendResult == SOCKET_ERROR) {
-				LOG_FATAL("Socket {%d} send failed: %d", socket, WSAGetLastError());
-				closesocket(socket);
-
-				free(responseBuffer);
-				freeHttpRequest(request);
-				freeHttpResponse(response);
-				WSACleanup();
-				return 1;
-			}
-
-			LOG_INFO("Socket {%d} bytes sent: %d", socket, sendResult);
-			LOG_INFO("Socket:{%d} Message:\r\n%s", socket, responseBuffer);
+		int sendResult = send(socket, responseBuffer, responseBufferLen, 0);
+		if (sendResult == SOCKET_ERROR) {
+			LOG_FATAL("Socket {%d} send failed: %d", socket, WSAGetLastError());
+			closesocket(socket);
 
 			free(responseBuffer);
-			freeHttpRequest(request);
+			freeHttpRequest(&request);
 			freeHttpResponse(response);
-		}
-		else if (connectionResult == 0) {
-			LOG_INFO("Socket {%d} connection closing...", socket);
-		}
-		else {
-			LOG_FATAL("Socket {%d} cecv failed: %d", socket, WSAGetLastError());
-			closesocket(socket);
 			WSACleanup();
 			return 1;
 		}
-	} while (connectionResult > 0);
+
+		LOG_INFO("Socket {%d} bytes sent: %d", socket, sendResult);
+		LOG_INFO("Socket:{%d} Message:\r\n%s", socket, responseBuffer);
+
+		free(responseBuffer);
+		freeHttpRequest(&request);
+		freeHttpResponse(response);
+	} while (continueConnection);
 
 	if (shutdown(socket, SD_SEND) == SOCKET_ERROR) {
 		LOG_FATAL("Socket {%d} Shutdown failed: %d", socket, WSAGetLastError());
@@ -226,6 +204,6 @@ DWORD threadFunction(void* lpParam) {
 	LOG_TRACE("Closing thread {%d} socket {%d}", threadId, socket);
 	closesocket(socket);
 
-	pdata->isActive = FALSE;
+	pdata->isActive = false;
 	return 0;
 }

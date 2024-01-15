@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
 typedef struct MainThreadData MTData, *PMTData;
 typedef struct SocketThreadData SOCKTD, *PSOCKTD;
@@ -15,7 +16,7 @@ typedef struct SocketThreadData SOCKTD, *PSOCKTD;
 struct SocketThreadData {
 	int threadId;
 	SOCKET socket;
-	BOOL isActive;
+	bool isActive;
 	PMTData pmtData;
 };
 

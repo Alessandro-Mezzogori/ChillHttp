@@ -5,6 +5,7 @@
 #include<stdlib.h>
 #include<ctype.h>
 #include<stdbool.h>
+#include<winsock2.h>
 
 typedef enum HTTP_METHOD {
 	HTTP_UNKNOWN,
@@ -41,10 +42,10 @@ typedef struct HttpResponse {
 	char* body;
 } HttpResponse;
 
-HttpRequest* parseHttpRequest(const char* request);
+errno_t recvRequest(SOCKET socket, HttpRequest* req);
 void freeHttpRequest(HttpRequest* request);
 
 HttpResponse* createHttpResponse(HTTP_VERSION version, short statusCode, HashTable* headers, char* body);
+errno_t buildHttpResponse(HttpResponse* response, char** buffer, size_t* bufferSize);
 void freeHttpResponse(HttpResponse* response);
 
-errno_t buildHttpResponse(HttpResponse* response, char** buffer, size_t* bufferSize);

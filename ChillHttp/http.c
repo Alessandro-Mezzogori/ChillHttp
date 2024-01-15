@@ -63,89 +63,10 @@ int sanitizeHttpRequest(HttpRequest* request) {
 	return 0;
 }
 
-HttpRequest* parseHttpRequest(const char* request) {
-	HttpRequest* req = (HttpRequest*) malloc(sizeof(HttpRequest) * 1);
-	if(req == NULL) {
-		return NULL;
-	}
-
-	req->method = HTTP_GET;
-	req->version = HTTP_1_1;
-	req->headers = NULL;
-	req->body = NULL;
-
-	char* requestCopy = strdup(request);
-	if (requestCopy == NULL) {
-		freeHttpRequest(req);
-		return NULL;
-	}
-
-	char* bodyStart = strstr(requestCopy, "\r\n\r\n");
-	if(bodyStart != NULL) {
-		bodyStart[0] = '\0';
-		bodyStart += 4;
-	}
-
-	char* requestCopyNextToken = NULL;
-	char* line = strtok_s(requestCopy, "\r\n", &requestCopyNextToken);
-
-	char* lineNextToken = NULL;
-	char* method = strtok_s(line, " ", &lineNextToken);
-
-	req->method = parseHttpMethod(method);
-
-	char* path = strtok_s(NULL, " ", &lineNextToken);
-	req->path = strdup(path); 
-
-	char* version = strtok_s(NULL, " ", &lineNextToken);
-	req->version = parseHttpVersion(version);
-
-	char* header = strtok_s(NULL, "\r\n", &requestCopyNextToken);
-	if(header != NULL) {
-		req->headers = hashtableCreate();
-	}
-
-	while (header != NULL) {
-		char* delimiter = strchr(header, ':');
-		*delimiter = '\0';
-		delimiter++;
-
-		while (isspace(*delimiter)) {
-			delimiter++;
-		}
-
-		char* end = requestCopyNextToken - 2;
-		while(isspace(*end)) {
-			*end = '\0';
-			end--;
-		}
-
-		hashtableAdd(req->headers, header, delimiter);
-		header = strtok_s(NULL, "\r\n", &requestCopyNextToken);
-	};
-
-	if (bodyStart != NULL) {
-		// TODO capire se 3 o 2
-		req->body = strdup(bodyStart);
-	}
-
-	free(requestCopy);
-
-	// TODO errror handling
-	int sanitizeResult = sanitizeHttpRequest(req);
-	if(sanitizeResult != 0) {
-		freeHttpRequest(req);
-		return NULL;
-	}
-
-	return req;
-}
-
 void freeHttpRequest(HttpRequest* request) {
 	free(request->path);
 	hashtableFree(request->headers);
 	free(request->body);
-	free(request);
 }
 
 HttpResponse* createHttpResponse(HTTP_VERSION version, short statusCode, HashTable* headers, char* body) {
@@ -286,4 +207,183 @@ errno_t buildHttpResponse(HttpResponse* response, char** buffer, size_t* bufferS
 	}
 
 	return 0;
+}
+
+enum RecvRequestState {
+	RECV_Start,
+	RECV_Heading,
+	RECV_Headers,
+	RECV_BodyStrategy,
+	RECV_Body,
+};
+
+size_t findWordBounds(char** start) {
+	while (isspace(**start)) {
+		(*start)++;
+	}
+
+	char* end = *start;
+	while(!isspace(*end)) {
+		end++;
+	}
+
+	return end - *start;
+}
+
+errno_t recvRequest(SOCKET socket, HttpRequest* req) {
+	// ##### Request init globals #####
+	errno_t err = 0;
+
+	// ##### Request parsing pipeline setup #####
+	enum RecvRequestState state = RECV_Start;	
+
+	const size_t bufferchunk = 4096; //32;
+	size_t size = 0;
+	size_t capacity = bufferchunk * 4;
+	char* buffer = (char*) malloc(capacity * sizeof(char));
+	if (req == NULL) {
+		err = ENOMEM;
+	}
+
+	req->method = HTTP_UNKNOWN;
+	req->path = NULL;
+	req->version = HTTP_UNKNOWN_VERSION;
+	req->headers = hashtableCreate();
+	req->body = NULL;
+
+	if(req->headers == NULL) {
+		err = ENOMEM;
+		goto _cleanup_request;
+	}
+
+	// ##### Request parsing pipeline #####
+
+	bool stopRecv = false;
+	int recvResult = 0;
+	size_t bytesRead = 0;
+	long bodyLen = 0;
+	do {
+		recvResult = recv(socket, buffer + size, bufferchunk, 0);
+		if (recvResult < 0) {
+			LOG_ERROR("recv failed: %d", WSAGetLastError());
+			err = WSAGetLastError();
+			goto _cleanup_request;
+		}
+
+		size += recvResult;
+		if (size >= capacity) {
+			capacity = capacity * 2;
+			char* newBuffer = (char*) realloc(buffer, capacity * sizeof(char));
+			if(newBuffer == NULL) {
+				err = ENOMEM;
+				goto _cleanup_request;
+			}
+
+			buffer = newBuffer;
+		}
+
+		stopRecv = recvResult == 0;
+		if (state == RECV_Start) {
+			char* headingEndPtr = strchr(buffer + bytesRead, '\n');
+			char* headingPtr = buffer + bytesRead;
+			if (headingEndPtr != NULL) {
+				size_t methodLength = findWordBounds(&headingPtr);
+				headingPtr[methodLength] = '\0';
+				req->method = parseHttpMethod(headingPtr);
+				headingPtr += methodLength + 1;
+
+				size_t pathLength = findWordBounds(&headingPtr);
+				headingPtr[pathLength] = '\0';
+				req->path = strdup(headingPtr);
+				headingPtr += pathLength + 1;
+
+				size_t versionLength = findWordBounds(&headingPtr);
+				headingPtr[versionLength] = '\0';
+				req->version = parseHttpVersion(headingPtr);
+				headingPtr += versionLength + 1;
+
+				state = RECV_Headers;
+				bytesRead = headingEndPtr - buffer + 1;
+			}
+		}
+
+		if (state == RECV_Headers) {
+			while (true) {
+				char* headingPtr = buffer + bytesRead;
+				if (memcmp(headingPtr, "\r\n", 2) == 0 || memcmp(headingPtr, "\n", 1) == 0) {
+					state = RECV_BodyStrategy;
+					bytesRead += (*headingPtr == '\n' ? 1 : 2);
+					break;
+				}
+
+				char* headingEndPtr = strchr(headingPtr, '\n');
+				if (headingEndPtr == NULL) {
+					break;
+				}
+
+				char* separatorPtr = strchr(headingPtr, ':');
+				if (separatorPtr == NULL) {
+					break;
+				}
+
+				*separatorPtr = '\0';
+				separatorPtr += 1;
+				while (isspace(*separatorPtr)) {
+					separatorPtr++;
+				}
+
+				char* end = headingEndPtr;
+				while (isspace(*end)) {
+					end--;
+				}
+				end[1] = '\0';
+
+				hashtableAdd(req->headers, headingPtr, separatorPtr);
+				bytesRead = headingEndPtr - buffer + 1;
+			}
+		}
+
+		if (state == RECV_BodyStrategy) {
+			LOG_DEBUG("Parased headers:");
+			hashtablePrint(LOG_FP, req->headers);
+
+			HashEntry* contentLength = hashtableLookup(req->headers, "Content-Length");
+			if(contentLength != NULL) {
+				bodyLen = strtol(contentLength->value, NULL, 10);
+				state = RECV_Body;
+			}
+			else {
+				LOG_ERROR("Content-Length header not found");
+				LOG_ERROR("No other end body strategy supported");
+				err = 1; // TODO trovare un errore corretto
+				goto _cleanup_request;
+			}
+		}
+
+		if (state == RECV_Body) {
+			if (size - bytesRead >= bodyLen) {
+				char* body = buffer + bytesRead;
+				req->body = malloc((bodyLen + 1)*sizeof(char));
+				req->body[bodyLen] = '\0';
+				memcpy_s(req->body, bodyLen, body, bodyLen);
+
+				stopRecv = true;
+			}
+		}
+	} while (!stopRecv);
+
+	// TODO errror handling
+	int sanitizeResult = sanitizeHttpRequest(req);
+	if(sanitizeResult != 0) {
+		err = 1;
+		goto _cleanup_request;
+	}
+
+	return 0;
+	// ##### Request error cleanup #####
+_cleanup_request:
+	free(buffer);
+	freeHttpRequest(req);
+	//free(request);
+	return err;
 }
