@@ -1,0 +1,8 @@
+#############################
+##### CHILL HTTP SERVER #####
+#############################
+
+
+# Comment 
+SERVING_FOLDER=D:\Projects\ChillHttp\ChillHttp\wwwroot
+PORT=8080

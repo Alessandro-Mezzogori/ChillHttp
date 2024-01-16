@@ -118,7 +118,6 @@ DWORD threadFunction(void* lpParam) {
 
 	LOG_INFO("Thread {%d} socket: {%d} initiliazed", threadId, socket);
 
-	size_t servingFolderLength = strlen(mtData->servingFolder);
 	bool continueConnection = true;
 	do {
 		HttpRequest request;
@@ -135,7 +134,7 @@ DWORD threadFunction(void* lpParam) {
 		}
 
 		// read path
-		FILE* file = openServingFolderFile(mtData->servingFolder, servingFolderLength, request.path);
+		FILE* file = openServingFolderFile(mtData->config.servingFolder, mtData->config.servingFolderLen, request.path);
 		if (file == NULL) {
 			LOG_ERROR("Path %s not found", request.path);
 			LOG_ERROR("File error {%s}", file);

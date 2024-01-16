@@ -2,6 +2,7 @@
 
 #include "log/log.h"
 #include "http.h"
+#include "config.h"
 #include <winsock2.h>
 #include <Windows.h>
 #include <WS2tcpip.h>
@@ -27,7 +28,7 @@ struct MainThreadData {
 	PSOCKTD* pdataThreadArray;
 	BOOL isRunning;
 	unsigned int activeThreadCount;
-	char* servingFolder;
+	Config config;
 };
 
 DWORD threadFunction(void* lpParam);

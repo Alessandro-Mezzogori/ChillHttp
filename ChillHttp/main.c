@@ -2,6 +2,7 @@
 
 #include "log/log.h"
 #include "hashtable.h"
+#include "config.h"
 #include "http.h"
 #include "thread.h"
 #include <ws2tcpip.h>
@@ -15,7 +16,6 @@
 #define SocketCreationError 2
 #define ListenError 3
 
-#define DEFAULT_PORT "27015"
 #define MAX_CONCURRENT_THREADS 5
 
 
@@ -42,7 +42,6 @@ void freeMainThreadData(PMTData data) {
 	free(data->dwThreadIdArray);
 	free(data->hThreadArray);
 	free(data->pdataThreadArray);
-	free(data->servingFolder);
 	free(data);
 }
 
@@ -82,6 +81,9 @@ DWORD cleanupThreadFunction(void* lpParam) {
 int main() { 
 	setlocale(LC_ALL, "");
 
+	Config config;
+	loadConfig(&config);
+
 	struct WSAData wsa;
 	LOG_INFO("Initialiasing Winsock");
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
@@ -97,7 +99,7 @@ int main() {
 	hints.ai_flags = AI_PASSIVE;
 
 	struct addrinfo *result = NULL;	
-	if (getaddrinfo(NULL, DEFAULT_PORT, &hints, &result) != 0) {
+	if (getaddrinfo(NULL, config.port, &hints, &result) != 0) {
 		LOG_FATAL("getaddrinfo failed with error: %d", WSAGetLastError());
 		WSACleanup();
 		return 1;
@@ -110,12 +112,7 @@ int main() {
 		return 1;
 	}
 
-	char SERVING_FOLDER[] = "D:\\Projects\\ChillHttp\\ChillHttp\\wwwroot";
-
-	size_t servingFolderLength = strlen(SERVING_FOLDER);
-	mtData->servingFolder = (char*) calloc(servingFolderLength + 1, sizeof(char));
-	strcpy_s(mtData->servingFolder, servingFolderLength + 1, SERVING_FOLDER); // could use memcpy here
-
+	mtData->config = config;
 	mtData->isRunning = TRUE;
 	mtData->activeThreadCount = 0;
 	mtData->dwThreadIdArray = calloc(MAX_CONCURRENT_THREADS, sizeof(DWORD));
