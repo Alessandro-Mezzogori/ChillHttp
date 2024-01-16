@@ -157,7 +157,6 @@ int main() {
 		return 1;
 	}
 
-	int counter = 0;
 	while (TRUE) {
 		SOCKET clientSocket = accept(serverSocket, NULL, NULL);
 		if(clientSocket == INVALID_SOCKET) {
@@ -180,9 +179,6 @@ int main() {
 			PSOCKTD pdata = (PSOCKTD)malloc(sizeof(SOCKTD));
 			if (pdata == NULL) {
 				LOG_FATAL("Malloc failed");
-
-				// Sets counter to 2 to break outer loop
-				counter = 2;
 				break;
 			}
 
@@ -197,14 +193,9 @@ int main() {
 			hThreadArray[availableThreadIndex] = CreateThread(NULL, 0, threadFunction, pdata, 0, &dwThreadIdArray[availableThreadIndex]);
 			mtData->activeThreadCount += 1;
 			LOG_TRACE("Active thread count: %d", mtData->activeThreadCount);
-			counter++;
 		}
 		else {
 			LOG_ERROR("No free threads");
-		}
-
-		if (counter >= 2) {
-			break;
 		}
 	}
 

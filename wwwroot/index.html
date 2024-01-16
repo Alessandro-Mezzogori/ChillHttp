@@ -1,7 +1,49 @@
 <!DOCTYPE html>
 <html>
+    <head>
+        <link rel="stylesheet" href="app.css" />
+        <script src="app.js"></script>
+        <script>
+            function testFunction() {
+                alert("Test");
+            }
+
+            async function postTest() {
+                try {
+                    const homeResponse = await fetch('/test', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': '*/*'
+                        },
+                        body: JSON.stringify({
+                            name: 'John'
+                        })
+                    });
+
+                    debugger;
+                    if (homeResponse.ok) {
+                        document.getElementById("preview").innerHTML = await homeResponse.text();
+                    }
+                    else {
+                        document.getElementById("preview").innerHTML = homeResponse.status;
+                    }
+
+                }
+                catch (err) {
+                    document.getElementById("preview").innerHTML = JSON.stringify(err, undefined, 2);
+                }
+
+            }
+        </script>
+    </head>
     <body>
         <h1>My First Heading</h1>
-        <p>My first paragraph.</p>
+        <p class="test">My first paragraph.</p>
+        <button style="" onclick="testClick()">Click me</button>
+        <button style="" onclick="postTest()">Home</button>
+
+        <pre id="preview">
+        </pre>
     </body>
 </html>

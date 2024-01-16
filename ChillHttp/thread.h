@@ -1,6 +1,7 @@
 #pragma once
 
 #include "log/log.h"
+#include "router.h"
 #include "http.h"
 #include "config.h"
 #include <winsock2.h>

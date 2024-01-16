@@ -49,6 +49,10 @@ HTTP_VERSION parseHttpVersion(char* version) {
 }
 
 int sanitizeHttpRequest(HttpRequest* request) {
+	if (request->path == NULL) {
+		return 1;
+	}
+
 	char* foundFolderBack = strstr(request->path, "..");
 	if (foundFolderBack) {
 		free(request->path);
@@ -69,27 +73,40 @@ void freeHttpRequest(HttpRequest* request) {
 	free(request->body);
 }
 
-HttpResponse* createHttpResponse(HTTP_VERSION version, short statusCode, HashTable* headers, char* body) {
-	HttpResponse* response = (HttpResponse*) malloc(sizeof(HttpResponse));
+errno_t createHttpResponse(HttpResponse** response) {
 	if(response == NULL) {
-		return NULL;
+		return 0;
 	}
 
-	if (headers == NULL) {
-		headers = hashtableCreate();
+	*response = (HttpResponse*)malloc(sizeof(HttpResponse));
+	if(*response == NULL) {
+		return ENOMEM;
+	}
 
-		if (headers == NULL) {
-			free(response);
-			return NULL;
-		}
+	(*response)->version = HTTP_UNKNOWN_VERSION;
+	(*response)->statusCode = 0;
+	(*response)->body = NULL;
+	(*response)->headers = hashtableCreate();
+
+	if((*response)->headers == NULL) {
+		free(*response);
+		return ENOMEM;
+	}
+
+	return 0;
+}
+
+errno_t setHttpResponse(HttpResponse* response, HTTP_VERSION version, short statusCode, char* body) {
+	if(response == NULL) {
+		LOG_ERROR("Response or headers are NULL");
+		return 1;
 	}
 
 	response->version = version;
 	response->statusCode = statusCode;
-	response->headers = headers;
 	response->body = body;
 
-	return response;
+	return 0;
 }
 
 void freeHttpResponse(HttpResponse* response) {
@@ -108,26 +125,28 @@ errno_t buildHttpResponse(HttpResponse* response, char** buffer, size_t* bufferS
 	// LEN = X (BODY)
 	size_t statusMsgLen = 0;
 	size_t headingLen = 8 + 1 + 3 + 1 + statusMsgLen + 2;
-
 	const size_t headerBodySeparatorLen = 2; // CRLF
-	size_t bodyLen = strlen(response->body);
 
-	size_t headersLen = 0;
-	bool hasContentLength = false;
 	HashTable* headers = response->headers;
 	if (headers == NULL) {
 		LOG_ERROR("Headers are NULL");
 		return 1;
 	}
 
-	// Content-Length
-	char contentLengthString[32];
-	sprintf_s(contentLengthString, sizeof(contentLengthString), "%zu", bodyLen);
-	// TODO maybe for the current implementation it is better to lookup and create only if not found
-	hashtableAdd(headers, "Content-Length", contentLengthString);
+	size_t bodyLen = 0;
+	if(response->body != NULL) {
+		bodyLen = strlen(response->body);
+
+		// Content-Length
+		char contentLengthString[32];
+		sprintf_s(contentLengthString, sizeof(contentLengthString), "%zu", bodyLen);
+		// TODO maybe for the current implementation it is better to lookup and create only if not found
+		hashtableAdd(headers, "Content-Length", contentLengthString);
+	}
 
 	// TODO optimize: hashtable can store the byte size that is occupying, this leads to one less non-adjacent 
 	// memory access at the cost of 8 bytes (size_t, probabily overkill, more for consistency)
+	size_t headersLen = 0;
 	for (size_t i = 0; i < headers->hashsize; i++) {
 		HashEntry* entry = headers->entries[i];
 
@@ -237,7 +256,7 @@ errno_t recvRequest(SOCKET socket, HttpRequest* req) {
 	// ##### Request parsing pipeline setup #####
 	enum RecvRequestState state = RECV_Start;	
 
-	const size_t bufferchunk = 4096; //32;
+	const int bufferchunk = 4096; //32;
 	size_t size = 0;
 	size_t capacity = bufferchunk * 4;
 	char* buffer = (char*) malloc(capacity * sizeof(char));
@@ -355,8 +374,7 @@ errno_t recvRequest(SOCKET socket, HttpRequest* req) {
 			else {
 				LOG_ERROR("Content-Length header not found");
 				LOG_ERROR("No other end body strategy supported");
-				err = 1; // TODO trovare un errore corretto
-				goto _cleanup_request;
+				stopRecv = true;
 			}
 		}
 
@@ -378,6 +396,8 @@ errno_t recvRequest(SOCKET socket, HttpRequest* req) {
 		err = 1;
 		goto _cleanup_request;
 	}
+
+	free(buffer);
 
 	return 0;
 	// ##### Request error cleanup #####

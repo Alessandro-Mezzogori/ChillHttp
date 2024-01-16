@@ -136,6 +136,7 @@
     <ClCompile Include="http.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="log\log.c" />
+    <ClCompile Include="router.c" />
     <ClCompile Include="thread.c" />
   </ItemGroup>
   <ItemGroup>
@@ -143,6 +144,7 @@
     <ClInclude Include="hashtable.h" />
     <ClInclude Include="http.h" />
     <ClInclude Include="log\log.h" />
+    <ClInclude Include="router.h" />
     <ClInclude Include="thread.h" />
   </ItemGroup>
   <ItemGroup>
