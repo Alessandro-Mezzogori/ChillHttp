@@ -17,6 +17,24 @@ typedef struct {
 
 	// ##### PORT #####
 	char port[MAX_CONFIG_PORT_LEN];
+
+	// ##### CONNECTION #####
+	size_t recvTimeout;
+
+	// ##### LOGGING #####
+
+	// ##### THREADS #####
+	size_t maxConcurrentThreads;
+
+	// ##### PIPELINE #####
+
+	// ##### CACHE #####
+
+	// ##### SECURITY #####
+
+	// ##### SSL #####
+
+
 } Config;
 
 errno_t loadConfig(Config* config);

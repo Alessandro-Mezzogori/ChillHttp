@@ -16,16 +16,14 @@
 #define SocketCreationError 2
 #define ListenError 3
 
-#define MAX_CONCURRENT_THREADS 5
-
-
 void freeMainThreadData(PMTData data) {
 	if (data == NULL) {
 		return;
 	}
 
+	const size_t maxConcurrentThreads = data->config.maxConcurrentThreads;
 	if(data->hThreadArray != NULL) {
-		for (int i = 0; i < MAX_CONCURRENT_THREADS; i++) {
+		for (int i = 0; i < maxConcurrentThreads; i++) {
 			if (data->hThreadArray[i] != NULL) {
 				CloseHandle(data->hThreadArray[i]);
 			}
@@ -33,7 +31,7 @@ void freeMainThreadData(PMTData data) {
 	}
 
 	if(data->pdataThreadArray != NULL) {
-		for (int i = 0; i < MAX_CONCURRENT_THREADS; i++) {
+		for (int i = 0; i < maxConcurrentThreads; i++) {
 			free(data->pdataThreadArray[i]);
 		}
 	}
@@ -50,10 +48,11 @@ DWORD cleanupThreadFunction(void* lpParam) {
 
 	LOG_TRACE("Cleanup thread initialized");
 
+	const size_t maxConcurrentThreads = pdata->config.maxConcurrentThreads;
 	while (pdata->isRunning) {
 		Sleep(1000);
 
-		for(int i = 0; i < MAX_CONCURRENT_THREADS; i++) {
+		for(int i = 0; i < maxConcurrentThreads; i++) {
 			if (pdata->hThreadArray[i] != NULL) {
 				DWORD exitCode = 0;
 				if(GetExitCodeThread(pdata->hThreadArray[i], &exitCode) != 0) {
@@ -115,9 +114,9 @@ int main() {
 	mtData->config = config;
 	mtData->isRunning = TRUE;
 	mtData->activeThreadCount = 0;
-	mtData->dwThreadIdArray = calloc(MAX_CONCURRENT_THREADS, sizeof(DWORD));
-	mtData->hThreadArray= calloc(MAX_CONCURRENT_THREADS, sizeof(HANDLE));
-	mtData->pdataThreadArray= calloc(MAX_CONCURRENT_THREADS, sizeof(PSOCKTD));
+	mtData->dwThreadIdArray = calloc(config.maxConcurrentThreads, sizeof(DWORD));
+	mtData->hThreadArray= calloc(config.maxConcurrentThreads, sizeof(HANDLE));
+	mtData->pdataThreadArray= calloc(config.maxConcurrentThreads, sizeof(PSOCKTD));
 
 	mtData->serverSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
 	SOCKET serverSocket = mtData->serverSocket;
@@ -142,7 +141,7 @@ int main() {
 	HANDLE* hThreadArray = mtData->hThreadArray;
 	PSOCKTD* pdataThreadArray = mtData->pdataThreadArray;
 
-	if (listen(serverSocket, MAX_CONCURRENT_THREADS) == SOCKET_ERROR) {
+	if (listen(serverSocket, config.maxConcurrentThreads) == SOCKET_ERROR) {
 		LOG_FATAL("Listened failed: %d", WSAGetLastError());
 		freeMainThreadData(mtData);
 		WSACleanup();
@@ -165,9 +164,16 @@ int main() {
 			break;
 		}
 
+		int setsockoptRes = setsockopt(clientSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&config.recvTimeout, sizeof(int));
+		if(setsockoptRes == SOCKET_ERROR) {
+			LOG_ERROR("setsockopt failed: %d", WSAGetLastError());
+			closesocket(clientSocket);
+			continue;
+		}
+
 		// find first free thread
 		int availableThreadIndex = -1;
-		for(int i = 0; i < MAX_CONCURRENT_THREADS; i++) {
+		for(int i = 0; i < config.maxConcurrentThreads; i++) {
 			if (hThreadArray[i] == NULL) {
 				availableThreadIndex = i;
 				break;
@@ -185,6 +191,7 @@ int main() {
 			pdata->threadId = availableThreadIndex;
 			pdata->socket = clientSocket;
 			pdata->isActive = TRUE;
+			pdata->connectionStatus = CONNECTION_STATUS_CONNECTED;
 
 			// idk if it's the best way to do it, for now it's fine
 			// TODO find better way to pass env data to thread
@@ -196,12 +203,15 @@ int main() {
 		}
 		else {
 			LOG_ERROR("No free threads");
+
+			// TODO error to client
+			closesocket(clientSocket);
 		}
 	}
 
 	LOG_FLUSH();
 
-	for(int i = 0; i < MAX_CONCURRENT_THREADS; i++) {
+	for(int i = 0; i < config.maxConcurrentThreads; i++) {
 		if (hThreadArray[i] != NULL) {
 			WaitForSingleObject(hThreadArray[i], INFINITE);
 		}

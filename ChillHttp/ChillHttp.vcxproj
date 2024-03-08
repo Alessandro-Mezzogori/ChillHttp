@@ -141,9 +141,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="config.h" />
+    <ClInclude Include="chillerrors.h" />
     <ClInclude Include="hashtable.h" />
     <ClInclude Include="http.h" />
     <ClInclude Include="log\log.h" />
+    <ClInclude Include="pipeline.h" />
     <ClInclude Include="router.h" />
     <ClInclude Include="thread.h" />
   </ItemGroup>

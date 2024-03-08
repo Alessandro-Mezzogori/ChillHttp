@@ -15,10 +15,18 @@
 typedef struct MainThreadData MTData, *PMTData;
 typedef struct SocketThreadData SOCKTD, *PSOCKTD;
 
+typedef enum {
+	CONNECTION_STATUS_UNKNOWN,
+	CONNECTION_STATUS_CONNECTED,
+	CONNECTION_STATUS_CLOSING,
+	CONNECTION_STATUS_CLOSED
+} ConnectionStatus;
+
 struct SocketThreadData {
 	int threadId;
 	SOCKET socket;
 	bool isActive;
+	ConnectionStatus connectionStatus;
 	PMTData pmtData;
 };
 

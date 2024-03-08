@@ -59,6 +59,12 @@
     <ClInclude Include="router.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="chillerrors.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="pipeline.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="conf.txt" />

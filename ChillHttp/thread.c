@@ -13,7 +13,6 @@ DWORD threadFunction(void* lpParam) {
 
 	LOG_INFO("Thread {%d} socket: {%d} initiliazed", threadId, socket);
 
-	bool continueConnection = true;
 	do {
 		HttpRequest request;
 		errno_t err = recvRequest(socket, &request);
@@ -22,12 +21,6 @@ DWORD threadFunction(void* lpParam) {
 			break;
 		}
 			
-		HashEntry* connection = hashtableLookup(request.headers, "Connection");
-		if (connection != NULL && strcmp(connection->value, "close") == 0) {
-			continueConnection = false;
-			LOG_INFO("Socket {%d} closing connection", socket);
-		}
-
 		// read path
 		HttpResponse* response;
 		errno_t responseCreateErr = createHttpResponse(&response);
@@ -36,6 +29,12 @@ DWORD threadFunction(void* lpParam) {
 			LOG_ERROR("Error while creating response: %d", responseCreateErr);
 			freeHttpRequest(&request);
 			return 1;
+		}
+
+		HashEntry* connection = hashtableLookup(request.headers, "Connection");
+		if (connection != NULL && strcmp(connection->value, "close") == 0) {
+			pdata->connectionStatus = CONNECTION_STATUS_CLOSING;
+			LOG_INFO("Socket {%d} closing connection", socket);
 		}
 
 		errno_t handleErr = handleRequest(&mtData->config, &request, response);
@@ -74,7 +73,7 @@ DWORD threadFunction(void* lpParam) {
 		free(responseBuffer);
 		freeHttpRequest(&request);
 		freeHttpResponse(response);
-	} while (continueConnection);
+	} while (pdata->connectionStatus = CONNECTION_STATUS_CONNECTED);
 
 	if (shutdown(socket, SD_SEND) == SOCKET_ERROR) {
 		LOG_FATAL("Socket {%d} Shutdown failed: %d", socket, WSAGetLastError());

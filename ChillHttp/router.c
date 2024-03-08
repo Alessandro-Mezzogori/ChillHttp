@@ -5,29 +5,35 @@
 // TODO better return value ( error as parameter or return struct, file opening )
 // for now NULL means not found, any error during the opening of a static file will be 
 // assumed to be a 404 error
-FILE* openServingFolderFile(char* servingFolder, size_t servingFolderLen, const char* requestPath) {
+FILE* openServingFolderFile(const char* servingFolder, size_t servingFolderLen, const char* path) {
 	const char trailingIndex[] = "/index.html";
-	const size_t trailingIndexLen = 11;
+	const size_t trailingIndexLen = sizeof(trailingIndex);
 
 	// cases to handle:
 	// - "/[page]" -> "/[page]/index.html"
 	// - "/[page]/" -> "/[page]/index.html"
 	// - "/[page].[ext]" -> "/[page].[ext]"
 
-	const char* path = requestPath;
 	size_t pathLen = strlen(path);
 
 	BOOL hasTrailingSlash = path[pathLen - 1] == '/';
 	BOOL hasExtension = strchr(path, '.') != NULL;
 	size_t extensionLen = hasExtension == FALSE ? trailingIndexLen : 0;
 
+	size_t filePathLength = 0;
+	errno_t pathBuildingErr = 0;
+	char* filePath = NULL;
+
+	FILE* file = NULL;
+	errno_t openFileErr = 0;
+
 	if (hasTrailingSlash == TRUE) {
 		pathLen -= 1;
 	}
 
-	size_t filePathLength = servingFolderLen + pathLen + extensionLen;
-	errno_t pathBuildingErr = 0;
-	char* filePath = (char*) calloc(filePathLength + 1, sizeof(char));
+	filePathLength = servingFolderLen + pathLen + extensionLen;
+	pathBuildingErr = 0;
+	filePath = (char*) calloc(filePathLength + 1, sizeof(char));
 	if(filePath == NULL || filePathLength <= 0) {
 		goto _failure;
 	}
@@ -52,8 +58,8 @@ FILE* openServingFolderFile(char* servingFolder, size_t servingFolderLen, const 
 		}
 	}
 
-	FILE* file = NULL;
-	errno_t openFileErr = fopen_s(&file, filePath, "r");
+	file = NULL;
+	openFileErr = fopen_s(&file, filePath, "r");
 	if (openFileErr != 0 || file == NULL) {
 		LOG_ERROR("Error while opening file: %s (fopen_s error) %d", filePath, openFileErr);
 		goto _failure;
@@ -108,6 +114,9 @@ errno_t readTxtFile(FILE* file, char** out, size_t chunkSize) {
 
 errno_t serveFile(const char* servingFolder, size_t servingFolderLen, HttpRequest* request, HttpResponse* response) {
 	FILE* file = openServingFolderFile(servingFolder, servingFolderLen, request->path);
+	char* fileContent = NULL;
+	errno_t readErr = 0;
+
 	if (file == NULL) {
 		LOG_ERROR("Path %s not found", request->path);
 		LOG_ERROR("File error {%s}", file);
@@ -115,10 +124,8 @@ errno_t serveFile(const char* servingFolder, size_t servingFolderLen, HttpReques
 		goto _exit;
 	}
 
-	char* fileContent = NULL;
-	errno_t readErr = readTxtFile(file, &fileContent, 4096);
+	readErr = readTxtFile(file, &fileContent, 4096);
 	fclose(file);
-
 	if (readErr != 0) {
 		setHttpResponse(response, request->version, 500, NULL);
 		LOG_ERROR("Error while reading file: %s (readTxtFile error) %d", request->path, readErr);
