@@ -39,6 +39,9 @@
     <ClCompile Include="router.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="pipeline.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="log\log.h">
@@ -63,6 +66,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="pipeline.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="connection.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

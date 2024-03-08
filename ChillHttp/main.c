@@ -191,7 +191,7 @@ int main() {
 			pdata->threadId = availableThreadIndex;
 			pdata->socket = clientSocket;
 			pdata->isActive = TRUE;
-			pdata->connectionStatus = CONNECTION_STATUS_CONNECTED;
+			pdata->connectionData.connectionStatus = CONNECTION_STATUS_CONNECTED;
 
 			// idk if it's the best way to do it, for now it's fine
 			// TODO find better way to pass env data to thread

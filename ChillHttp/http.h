@@ -45,7 +45,7 @@ typedef struct HttpResponse {
 errno_t recvRequest(SOCKET socket, HttpRequest* req);
 void freeHttpRequest(HttpRequest* request);
 
-errno_t createHttpResponse(HttpResponse** response);
+errno_t createHttpResponse(HttpResponse* response);
 errno_t setHttpResponse(HttpResponse* response, HTTP_VERSION version, short statusCode, char* body);
 errno_t buildHttpResponse(HttpResponse* response, char** buffer, size_t* bufferSize);
 void freeHttpResponse(HttpResponse* response);

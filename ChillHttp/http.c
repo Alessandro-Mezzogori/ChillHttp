@@ -73,23 +73,17 @@ void freeHttpRequest(HttpRequest* request) {
 	free(request->body);
 }
 
-errno_t createHttpResponse(HttpResponse** response) {
+errno_t createHttpResponse(HttpResponse* response) {
 	if(response == NULL) {
 		return 0;
 	}
 
-	*response = (HttpResponse*)malloc(sizeof(HttpResponse));
-	if(*response == NULL) {
-		return ENOMEM;
-	}
+	response->version = HTTP_UNKNOWN_VERSION;
+	response->statusCode = 0;
+	response->body = NULL;
+	response->headers = hashtableCreate();
 
-	(*response)->version = HTTP_UNKNOWN_VERSION;
-	(*response)->statusCode = 0;
-	(*response)->body = NULL;
-	(*response)->headers = hashtableCreate();
-
-	if((*response)->headers == NULL) {
-		free(*response);
+	if(response->headers == NULL) {
 		return ENOMEM;
 	}
 
@@ -112,7 +106,6 @@ errno_t setHttpResponse(HttpResponse* response, HTTP_VERSION version, short stat
 void freeHttpResponse(HttpResponse* response) {
 	hashtableFree(response->headers);
 	free(response->body);
-	free(response);
 }
 
 /* Build response helpers */
@@ -372,9 +365,12 @@ errno_t recvRequest(SOCKET socket, HttpRequest* req) {
 				state = RECV_Body;
 			}
 			else {
-				LOG_ERROR("Content-Length header not found");
-				LOG_ERROR("No other end body strategy supported");
+				bodyLen = 0;
+				state = RECV_Body;
 				stopRecv = true;
+
+				LOG_WARN("Content-Length header not found");
+				LOG_WARN("No other end body strategy supported");
 			}
 		}
 
