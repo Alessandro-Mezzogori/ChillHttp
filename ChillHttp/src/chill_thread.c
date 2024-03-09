@@ -3,9 +3,87 @@
 
 #pragma region Pipeline
 
-
 errno_t noop_step(PipelineContext* context) {
 	LOG_INFO("[PipelineHandler]");
+
+	HttpRequest* request = context->request;
+
+	// test function call
+	LOG_TRACE("[PipelineHandler] - Lua state");
+	lua_State* L = luaL_newstate();
+	luaL_openlibs(L);
+
+	int r = luaL_dofile(L, "pipeline.lua");
+	if (r != LUA_OK) {
+		LOG_ERROR("Error: %s", lua_tostring(L, -1));
+	}
+
+	lua_len(L, -1);
+	int tableLen = lua_tointeger(L, -1);
+	lua_pop(L, 1);
+
+	PipelineStep* lua_steps = malloc(sizeof(PipelineStep) * tableLen);
+
+	LOG_INFO("TableLen: %d", tableLen);
+	for (int i = 0; i + 1 <= tableLen; ++i) {
+		lua_geti(L, -1, i + 1);
+
+		int isTable = lua_istable(L, -1);
+		LOG_INFO("Is table: %d", isTable);
+		stackDump(L);
+
+		if (isTable == 1) {
+			lua_getfield(L, -1, "name");
+			lua_steps[i].name = strdup(lua_tostring(L, -1));
+			lua_pop(L, 1);
+
+			lua_getfield(L, -1, "handler");
+			LOG_INFO("Is function %d", lua_isfunction(L, -1));
+			lua_steps[i].function = luaL_ref(L, LUA_REGISTRYINDEX);
+		}
+	}
+
+	lua_rawgeti(L, LUA_REGISTRYINDEX, lua_steps[0].function);
+
+	lua_newtable(L);
+	lua_pushinteger(L, request->method);
+	lua_setfield(L, -2, "method");
+
+	lua_pushstring(L, request->path);
+	lua_setfield(L, -2, "path");
+
+	lua_pushstring(L, request->body);
+	lua_setfield(L, -2, "body");
+
+	lua_newtable(L);
+
+	HashTable* ht = request->headers;
+	for (int i = 0; i < HASHSIZE; i++) {
+		HashEntry* entry = ht->entries[i];
+		while (entry != NULL) {
+			lua_pushstring(L, entry->value);
+			lua_setfield(L, -2, entry->name);
+
+			entry = entry->next;
+		}
+	}
+
+	stackDump(L);
+	lua_setfield(L, -2, "headers");
+	stackDump(L);
+
+	LOG_INFO("test_func is func ? %d", lua_isfunction(L, -2));
+	if (lua_isfunction(L, -2)) {
+		int err = lua_pcall(L, 1, 0, 0);
+		if (err != 0) {
+			LOG_ERROR("error running function: %s", lua_tostring(L, -1));
+		}
+	}
+
+	lua_pop(L, 1);
+
+	lua_close(L);
+
 	return next(context);
 }
 

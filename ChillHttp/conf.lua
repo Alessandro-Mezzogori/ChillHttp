@@ -2,7 +2,6 @@
 -- ##### CHILL HTTP SERVER #####
 -- #############################
 
-
 -- Comment 
 conf = {
     SERVING_FOLDER="D:\\Projects\\ChillHttp\\ChillHttp\\wwwroot",

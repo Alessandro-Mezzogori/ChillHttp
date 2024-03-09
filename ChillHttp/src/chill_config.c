@@ -1,5 +1,6 @@
 #include <chill_config.h>
 
+
 void parse_lua_conf(lua_State* L, void* data) {
 	lua_getglobal(L, "conf");
 	Config* conf = (Config*) data;
