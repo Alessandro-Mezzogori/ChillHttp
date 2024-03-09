@@ -49,10 +49,15 @@ errno_t handleRequestStep(PipelineContext* context) {
 	HttpRequest* request = context->request;
 	HttpResponse* response = context->response;
 
-	errno_t handleErr = handleRequest(config, request, response);
-	if(handleErr != 0) {
-		LOG_ERROR("Error while handling request: %d", handleErr);
-		return 1; // TODO return error code
+	errno_t err = 0;
+
+	err = handleError(config, request, response);
+	if (err == 1) {
+		err = handleRequest(config, request, response);
+		if(err != 0) {
+			LOG_ERROR("Error while handling request: %d", err);
+			return err;
+		}
 	}
 
 	return next(context);

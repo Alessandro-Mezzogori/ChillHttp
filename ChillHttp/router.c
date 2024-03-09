@@ -139,14 +139,6 @@ _exit:
 }
 
 errno_t serveError(const char* servingFolder, size_t servingFolderLen, HttpRequest* request, HttpResponse* response) {
-	if(response == NULL) {
-		return EINVAL;
-	}
-
-	if(response->statusCode < 400 || response->statusCode > 599) {
-		return EINVAL;
-	}
-
 	size_t filePathLength = servingFolderLen + 8 + 3 + 5 + 1;
 	char* filePath = (char*) calloc(filePathLength + 1, sizeof(char));
 	sprintf_s(filePath, filePathLength, "%s\\errors\\%hu.html", servingFolder, response->statusCode);
@@ -188,11 +180,6 @@ errno_t registerRoute(const char* route, HTTP_METHOD method, RouteHandler routeH
 
 // TODO better implementation, for now it just for a test
 errno_t handleRequest(Config* config, HttpRequest* request, HttpResponse* response) {
-	errno_t err = serveError(config->servingFolder, config->servingFolderLen, request, response);
-	if (err == 0) {
-		return 0;
-	}
-
 	if (strcmp(request->path, "/test") == 0 && request->method == HTTP_POST) {
 		return setHttpResponse(response, request->version, 203, strdup("test endpoint"));
 	}
@@ -201,6 +188,18 @@ errno_t handleRequest(Config* config, HttpRequest* request, HttpResponse* respon
 	}
 
 	return 1;
+}
+
+errno_t handleError(Config* config, HttpRequest* request, HttpResponse* response) {
+	if(response == NULL) {
+		return EINVAL;
+	}
+
+	if(response->statusCode < 400 || response->statusCode > 599) {
+		return 1;
+	}
+
+	return serveError(config->servingFolder, config->servingFolderLen, request, response);
 }
 
 
