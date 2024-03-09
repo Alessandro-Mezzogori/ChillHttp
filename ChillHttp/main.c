@@ -16,30 +16,33 @@
 #define SocketCreationError 2
 #define ListenError 3
 
+void freeChildThreadDescriptor(PCTD child) {
+	if (child->hThread != NULL) {
+		CloseHandle(child->hThread);
+		child->hThread = NULL;
+	}
+
+	free(child->pdata);
+	child->pdata = NULL;
+
+	child->dwThreadId = 0;
+}
+
 void freeMainThreadData(PMTData data) {
 	if (data == NULL) {
 		return;
 	}
 
 	const size_t maxConcurrentThreads = data->config.maxConcurrentThreads;
-	if(data->hThreadArray != NULL) {
-		for (int i = 0; i < maxConcurrentThreads; i++) {
-			if (data->hThreadArray[i] != NULL) {
-				CloseHandle(data->hThreadArray[i]);
-			}
+	PCTD childs = data->childs;
+	if (childs != NULL) {
+		for(int i = 0; i < maxConcurrentThreads; i++) {
+			freeChildThreadDescriptor(&childs[i]);
 		}
 	}
 
-	if(data->pdataThreadArray != NULL) {
-		for (int i = 0; i < maxConcurrentThreads; i++) {
-			free(data->pdataThreadArray[i]);
-		}
-	}
-
+	free(data->childs);
 	closesocket(data->serverSocket);
-	free(data->dwThreadIdArray);
-	free(data->hThreadArray);
-	free(data->pdataThreadArray);
 	free(data);
 }
 
@@ -53,17 +56,17 @@ DWORD cleanupThreadFunction(void* lpParam) {
 		Sleep(1000);
 
 		for(int i = 0; i < maxConcurrentThreads; i++) {
-			if (pdata->hThreadArray[i] != NULL) {
+			PCTD child = &pdata->childs[i];
+
+			if (child->hThread != NULL) {
 				DWORD exitCode = 0;
-				if(GetExitCodeThread(pdata->hThreadArray[i], &exitCode) != 0) {
+
+				if(GetExitCodeThread(child->hThread, &exitCode) != 0) {
 					if (exitCode != STILL_ACTIVE) {
 						LOG_TRACE("Thread {%d} exited with code {%d}", i, exitCode);
 						LOG_TRACE("Cleanup thread {%d}");
-						CloseHandle(pdata->hThreadArray[i]);
 
-						pdata->hThreadArray[i] = NULL;
-						pdata->dwThreadIdArray[i] = 0;
-						free(pdata->pdataThreadArray[i]);
+						freeChildThreadDescriptor(child);
 
 						pdata->activeThreadCount -= 1;
 						LOG_TRACE("Active thread count: %d", pdata->activeThreadCount);
@@ -114,9 +117,13 @@ int main() {
 	mtData->config = config;
 	mtData->isRunning = TRUE;
 	mtData->activeThreadCount = 0;
-	mtData->dwThreadIdArray = calloc(config.maxConcurrentThreads, sizeof(DWORD));
-	mtData->hThreadArray= calloc(config.maxConcurrentThreads, sizeof(HANDLE));
-	mtData->pdataThreadArray= calloc(config.maxConcurrentThreads, sizeof(PSOCKTD));
+	mtData->childs = calloc(config.maxConcurrentThreads, sizeof(CTD));
+	if(mtData->childs == NULL) {
+		LOG_FATAL("Calloc failed");
+		freeMainThreadData(mtData);
+		WSACleanup();
+		return 1;
+	}
 
 	mtData->serverSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
 	SOCKET serverSocket = mtData->serverSocket;
@@ -137,10 +144,6 @@ int main() {
 
 	freeaddrinfo(result);
 
-	DWORD* dwThreadIdArray = mtData->dwThreadIdArray;
-	HANDLE* hThreadArray = mtData->hThreadArray;
-	PSOCKTD* pdataThreadArray = mtData->pdataThreadArray;
-
 	if (listen(serverSocket, config.maxConcurrentThreads) == SOCKET_ERROR) {
 		LOG_FATAL("Listened failed: %d", WSAGetLastError());
 		freeMainThreadData(mtData);
@@ -156,6 +159,7 @@ int main() {
 		return 1;
 	}
 
+	PCTD childs = mtData->childs;
 	while (TRUE) {
 		SOCKET clientSocket = accept(serverSocket, NULL, NULL);
 		if(clientSocket == INVALID_SOCKET) {
@@ -174,7 +178,9 @@ int main() {
 		// find first free thread
 		int availableThreadIndex = -1;
 		for(int i = 0; i < config.maxConcurrentThreads; i++) {
-			if (hThreadArray[i] == NULL) {
+			PCTD child = &childs[i];
+
+			if (child != NULL && child->hThread == NULL) {
 				availableThreadIndex = i;
 				break;
 			}
@@ -182,6 +188,8 @@ int main() {
 
 		if (availableThreadIndex >= 0) {
 			LOG_TRACE("Creating thread %d", availableThreadIndex);
+			PCTD threadDescriptor = &childs[availableThreadIndex];
+
 			PSOCKTD pdata = (PSOCKTD)malloc(sizeof(SOCKTD));
 			if (pdata == NULL) {
 				LOG_FATAL("Malloc failed");
@@ -197,7 +205,9 @@ int main() {
 			// TODO find better way to pass env data to thread
 			pdata->pmtData = mtData;
 
-			hThreadArray[availableThreadIndex] = CreateThread(NULL, 0, threadFunction, pdata, 0, &dwThreadIdArray[availableThreadIndex]);
+			threadDescriptor->hThread = CreateThread(NULL, 0, threadFunction, pdata, 0, &threadDescriptor->dwThreadId);
+			threadDescriptor->pdata = pdata;
+
 			mtData->activeThreadCount += 1;
 			LOG_TRACE("Active thread count: %d", mtData->activeThreadCount);
 		}
@@ -212,8 +222,10 @@ int main() {
 	LOG_FLUSH();
 
 	for(int i = 0; i < config.maxConcurrentThreads; i++) {
-		if (hThreadArray[i] != NULL) {
-			WaitForSingleObject(hThreadArray[i], INFINITE);
+		HANDLE hThread = childs[i].hThread;
+		if (hThread != NULL) {
+			// TODO handle timeout on wait for single thread  
+			WaitForSingleObject(hThread, INFINITE);
 		}
 	}
 

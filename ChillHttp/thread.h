@@ -16,6 +16,7 @@
 
 typedef struct MainThreadData MTData, *PMTData;
 typedef struct SocketThreadData SOCKTD, *PSOCKTD;
+typedef struct ChildThreadDescriptor CTD, *PCTD;
 
 
 struct SocketThreadData {
@@ -26,11 +27,15 @@ struct SocketThreadData {
 	PMTData pmtData;
 };
 
+struct ChildThreadDescriptor {
+	DWORD dwThreadId;
+	HANDLE hThread;
+	PSOCKTD pdata;
+};
+
 struct MainThreadData {
 	SOCKET serverSocket;
-	DWORD* dwThreadIdArray;
-	HANDLE* hThreadArray;
-	PSOCKTD* pdataThreadArray;
+	PCTD childs;
 	BOOL isRunning;
 	unsigned int activeThreadCount;
 	Config config;

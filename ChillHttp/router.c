@@ -142,7 +142,13 @@ _exit:
 
 errno_t serveError(const char* servingFolder, size_t servingFolderLen, HttpRequest* request, HttpResponse* response) {
 	size_t filePathLength = servingFolderLen + 8 + 3 + 5 + 1;
-	char* filePath = (char*) calloc(filePathLength + 1, sizeof(char));
+	char* filePath = (char*) malloc((filePathLength + 1)*sizeof(char));
+
+	if (filePath == NULL) {
+		LOG_ERROR("Error while allocating memory for file path: %d", ENOMEM);
+		goto _failure;
+	}
+
 	sprintf_s(filePath, filePathLength, "%s\\errors\\%hu.html", servingFolder, response->statusCode);
 
 	char* fileContent = NULL;
@@ -169,7 +175,10 @@ errno_t serveError(const char* servingFolder, size_t servingFolderLen, HttpReque
 _exit_with_cleanup:
 	free(fileContent);
 _failure:
-	free(filePath);
+	if (filePath != NULL){
+		free(filePath);
+	}
+
 	if (response->statusCode != 500) {
 		response->statusCode = 500;
 		return serveError(servingFolder, servingFolderLen, request, response);
@@ -194,7 +203,7 @@ errno_t registerRoute(Route* route, const char* path, HTTP_METHOD method, RouteH
 	return 0;
 }
 
-int compareRoute(const void* a, const void* b) {
+int compareRoute(void* ctx, const void* a, const void* b) {
 	Route* routeA = (Route*)a;
 	Route* routeB = (Route*)b;
 
@@ -213,8 +222,7 @@ int compareRoute(const void* a, const void* b) {
 	return 0;
 }
 
-// TODO better implementation, for now it just for a test
-errno_t handleRequest(Route* routes, size_t routesSize, Config* config, HttpRequest* request, HttpResponse* response) {
+errno_t handleRequest(Route* routes, size_t routesSize, const Config* config, HttpRequest* request, HttpResponse* response) {
 	errno_t err = 0;
 
 	qsort_s(routes, routesSize, sizeof(Route), compareRoute, NULL);
@@ -234,7 +242,14 @@ errno_t handleRequest(Route* routes, size_t routesSize, Config* config, HttpRequ
 	return err;
 }
 
-errno_t handleError(Config* config, HttpRequest* request, HttpResponse* response) {
+/// <summary>
+/// Handles error responses
+/// </summary>
+/// <param name="config"></param>
+/// <param name="request"></param>
+/// <param name="response"></param>
+/// <returns>if everything ok 0, 1 if the statuscode is not an error</returns>
+errno_t handleError(const Config* config, HttpRequest* request, HttpResponse* response) {
 	if(response == NULL) {
 		return EINVAL;
 	}

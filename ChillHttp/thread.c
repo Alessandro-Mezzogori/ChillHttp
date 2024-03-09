@@ -18,7 +18,7 @@ errno_t test_error_step(PipelineContext* context) {
 	// close connection if Connection: close header is present
 	HashEntry* connection = hashtableLookup(request->headers, "TEST-ERROR");
 	if (connection != NULL) {
-		unsigned short error = strtol(connection->value, NULL, 10);
+		unsigned short error = (unsigned short) strtol(connection->value, NULL, 10);
 		response->statusCode = error;
 	}
 
@@ -68,17 +68,17 @@ errno_t handleRequestStep(PipelineContext* context) {
 
 #pragma region Routes 
 
-errno_t test_route(Config* config, HttpRequest* request, HttpResponse* response) {
+errno_t test_route(const Config* config, HttpRequest* request, HttpResponse* response) {
 	LOG_INFO("[RouteHandler]");
 	return setHttpResponse(response, request->version, 203, strdup("test endpoint"));
 }
 
-errno_t test_route2(Config* config, HttpRequest* request, HttpResponse* response) {
+errno_t test_route2(const Config* config, HttpRequest* request, HttpResponse* response) {
 	LOG_INFO("[RouteHandler]");
 	return setHttpResponse(response, request->version, 203, strdup("test endpoint 2"));
 }
 
-errno_t serve_file(Config* config, HttpRequest* request, HttpResponse* response) {
+errno_t serve_file(const Config* config, HttpRequest* request, HttpResponse* response) {
 	LOG_INFO("[RouteHandler]");
 	return serveFile(config->servingFolder, config->servingFolderLen, request, response);
 }
@@ -161,7 +161,7 @@ DWORD threadFunction(void* lpParam) {
 			return 1;
 		}
 
-		int sendResult = send(socket, responseBuffer, responseBufferLen, 0);
+		int sendResult = send(socket, responseBuffer, (int) responseBufferLen, 0);
 		if (sendResult == SOCKET_ERROR) {
 			LOG_FATAL("Socket {%d} send failed: %d", socket, WSAGetLastError());
 			closesocket(socket);
