@@ -1,4 +1,4 @@
-#include "hashtable.h"
+#include <chill_hashtable.h>
 
 unsigned hashtableHash(char* s) {
 	unsigned hashval;

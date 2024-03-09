@@ -1,9 +1,5 @@
 #pragma once
 
-#include "log/log.h"
-#include "router.h"
-#include "http.h"
-#include "config.h"
 #include <winsock2.h>
 #include <Windows.h>
 #include <WS2tcpip.h>
@@ -11,8 +7,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
-#include "pipeline.h"
-#include "connection.h"
+
+#include <chill_log.h>
+#include <chill_router.h>
+#include <chill_http.h>
+#include <chill_config.h>
+#include <chill_pipeline.h>
+#include <chill_connection.h>
 
 typedef struct MainThreadData MTData, *PMTData;
 typedef struct SocketThreadData SOCKTD, *PSOCKTD;

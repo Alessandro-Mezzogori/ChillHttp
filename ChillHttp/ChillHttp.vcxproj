@@ -72,6 +72,14 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <CopyLocalDeploymentContent>true</CopyLocalDeploymentContent>
+    <IncludePath>D:\Projects\ChillHttp\ChillHttp\ChillHttp\src\include;D:\Projects\ChillHttp\ChillHttp\ChillHttp\lua542\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryPath>D:\Projects\ChillHttp\ChillHttp\ChillHttp\lua542;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <SourcePath>D:\Projects\ChillHttp\ChillHttp\ChillHttp\src;$(VC_SourcePath);</SourcePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>D:\Projects\ChillHttp\ChillHttp\ChillHttp\src\include;D:\Projects\ChillHttp\ChillHttp\ChillHttp\lua542\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\Projects\ChillHttp\ChillHttp\ChillHttp\lua542;$(LibraryPath)</LibraryPath>
+    <SourcePath>D:\Projects\ChillHttp\ChillHttp\ChillHttp\src;$(SourcePath)</SourcePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -108,6 +116,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <AdditionalIncludeDirectories>D:\Projects\ChillHttp\ChillHttp\ChillHttp\src\include;D:\Projects\ChillHttp\ChillHttp\ChillHttp\lua542\include;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -122,6 +131,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>D:\Projects\ChillHttp\ChillHttp\ChillHttp\src\include;D:\Projects\ChillHttp\ChillHttp\ChillHttp\lua542\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -131,33 +141,37 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="config.c" />
-    <ClCompile Include="hashtable.c" />
-    <ClCompile Include="http.c" />
-    <ClCompile Include="elua.c" />
-    <ClCompile Include="main.c" />
-    <ClCompile Include="log\log.c" />
-    <ClCompile Include="pipeline.c" />
-    <ClCompile Include="router.c" />
-    <ClCompile Include="thread.c" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="config.h" />
-    <ClInclude Include="chillerrors.h" />
-    <ClInclude Include="connection.h" />
-    <ClInclude Include="hashtable.h" />
-    <ClInclude Include="http.h" />
-    <ClInclude Include="log\log.h" />
-    <ClInclude Include="elua.h" />
-    <ClInclude Include="pipeline.h" />
-    <ClInclude Include="router.h" />
-    <ClInclude Include="thread.h" />
-  </ItemGroup>
-  <ItemGroup>
     <Text Include="conf.txt">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
     </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\include\chill_cbuffer.h" />
+    <ClInclude Include="src\include\chill_errors.h" />
+    <ClInclude Include="src\include\chill_config.h" />
+    <ClInclude Include="src\include\chill_connection.h" />
+    <ClInclude Include="src\include\chill_lua.h" />
+    <ClInclude Include="src\include\chill_hashtable.h" />
+    <ClInclude Include="src\include\chill_http.h" />
+    <ClInclude Include="src\include\chill_list.h" />
+    <ClInclude Include="src\include\chill_log.h" />
+    <ClInclude Include="src\include\chill_pipeline.h" />
+    <ClInclude Include="src\include\chill_router.h" />
+    <ClInclude Include="src\include\chill_socket.h" />
+    <ClInclude Include="src\include\chill_thread.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\chill_cbuffer.c" />
+    <ClCompile Include="src\chill_config.c" />
+    <ClCompile Include="src\chill_lua.c" />
+    <ClCompile Include="src\chill_hashtable.c" />
+    <ClCompile Include="src\chill_http.c" />
+    <ClCompile Include="src\chill_log.c" />
+    <ClCompile Include="src\chill_main.c" />
+    <ClCompile Include="src\chill_pipeline.c" />
+    <ClCompile Include="src\chill_router.c" />
+    <ClCompile Include="src\chill_thread.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

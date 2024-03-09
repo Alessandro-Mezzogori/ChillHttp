@@ -1,4 +1,4 @@
-#include "thread.h"
+#include <chill_thread.h>
 
 
 #pragma region Pipeline

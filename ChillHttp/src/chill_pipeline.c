@@ -1,4 +1,4 @@
-#include "pipeline.h"
+#include <chill_pipeline.h>
 
 errno_t next(PipelineContext* context) {
 	if (context->currentStep == NULL) {

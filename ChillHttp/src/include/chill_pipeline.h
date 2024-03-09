@@ -1,8 +1,8 @@
 #pragma once
-#include "http.h"
-#include "connection.h"
-#include "config.h"
-#include "router.h"
+#include <chill_http.h>
+#include <chill_connection.h>
+#include <chill_config.h>
+#include <chill_router.h>
 
 typedef struct PipelineContext PipelineContext;
 typedef struct PipelineStep PipelineStep;

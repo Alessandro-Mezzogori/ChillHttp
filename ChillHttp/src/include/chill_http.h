@@ -1,11 +1,12 @@
 #pragma once
 
-#include "hashtable.h"
-#include "log/log.h"
-#include<stdlib.h>
-#include<ctype.h>
-#include<stdbool.h>
-#include<winsock2.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <stdbool.h>
+#include <winsock2.h>
+
+#include <chill_hashtable.h>
+#include <chill_log.h>
 
 typedef enum HTTP_METHOD {
 	HTTP_UNKNOWN,

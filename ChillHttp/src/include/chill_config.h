@@ -5,7 +5,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
-#include "elua.h"
+#include <chill_lua.h>
 
 #define CONFIG_PATH_TEXT "conf.txt"
 #define CONFIG_PATH_LUA "conf.lua"

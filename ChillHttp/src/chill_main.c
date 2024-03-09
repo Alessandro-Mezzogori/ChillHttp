@@ -1,14 +1,15 @@
 #define WIN32_LEAN_AND_MEAN
 
-#include "log/log.h"
-#include "hashtable.h"
-#include "config.h"
-#include "http.h"
-#include "thread.h"
 #include <ws2tcpip.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <locale.h>
+
+#include <chill_log.h>
+#include <chill_hashtable.h>
+#include <chill_config.h>
+#include <chill_http.h>
+#include <chill_thread.h>
 
 #pragma comment(lib, "ws2_32.lib") // Winsock library
 

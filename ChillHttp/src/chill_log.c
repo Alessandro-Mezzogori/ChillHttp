@@ -1,4 +1,4 @@
-#include "log.h"
+#include <chill_log.h>
 
 const enum LOG_LEVEL log_runtime_level = LL_TRACE;
 const char* log_level_strings[] = {

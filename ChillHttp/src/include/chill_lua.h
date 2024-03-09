@@ -1,12 +1,13 @@
 #pragma once
 
-#include "log/log.h"
+#include <lua.h>
+#include <lauxlib.h>
+#include <luaconf.h>
+#include <lualib.h>
 
-#include "lua542/include/lua.h"
-#include "lua542/include/lauxlib.h"
-#include "lua542/include/luaconf.h"
-#include "lua542/include/lualib.h"
-#pragma comment(lib, "lua542/lua54.lib")
+#include <chill_log.h>
+
+#pragma comment(lib, "lua54.lib")
 
 typedef void (lua_callback)(lua_State* L, void* data);
 

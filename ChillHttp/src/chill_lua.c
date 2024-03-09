@@ -1,4 +1,4 @@
-#include "elua.h"
+#include <chill_lua.h>
 
 errno_t CheckLua(lua_State* L, int r) {
 	if (r != LUA_OK) {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "log/log.h"
+#include <chill_log.h>
 
 #define DEFAULT_BUFFER_SIZE 4096
 
