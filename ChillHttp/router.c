@@ -168,7 +168,13 @@ _exit_with_cleanup:
 	free(fileContent);
 _failure:
 	free(filePath);
-	setHttpResponse(response, request->version, 500, strdup("Internal Server Error"));
+	if (response->statusCode != 500) {
+		response->statusCode = 500;
+		return serveError(servingFolder, servingFolderLen, request, response);
+	}
+	else {
+		setHttpResponse(response, request->version, 500, strdup("500 - Internal Server Error"));
+	}
 _exit:
 	return 0;
 }
