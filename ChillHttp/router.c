@@ -117,14 +117,14 @@ errno_t serveFile(const char* servingFolder, size_t servingFolderLen, HttpReques
 	if (file == NULL) {
 		LOG_ERROR("Path %s not found", request->path);
 		LOG_ERROR("File error {%s}", file);
-		setHttpResponse(response, request->version, 404, NULL);
-		goto _exit;
+		response->statusCode = 404;
+		goto _exit_with_error;
 	}
 
 	readErr = readTxtFile(file, &fileContent, 4096);
 	fclose(file);
 	if (readErr != 0) {
-		setHttpResponse(response, request->version, 500, NULL);
+		response->statusCode = 500;
 		LOG_ERROR("Error while reading file: %s (readTxtFile error) %d", request->path, readErr);
 		goto _exit_with_cleanup;
 	}
@@ -134,6 +134,8 @@ errno_t serveFile(const char* servingFolder, size_t servingFolderLen, HttpReques
 
 _exit_with_cleanup:
 	free(fileContent);
+_exit_with_error:
+	return -1;
 _exit:
 	return 0;
 }
@@ -186,14 +188,20 @@ errno_t registerRoute(const char* route, HTTP_METHOD method, RouteHandler routeH
 
 // TODO better implementation, for now it just for a test
 errno_t handleRequest(Config* config, HttpRequest* request, HttpResponse* response) {
+	errno_t err = 0;
+
 	if (strcmp(request->path, "/test") == 0 && request->method == HTTP_POST) {
-		return setHttpResponse(response, request->version, 203, strdup("test endpoint"));
+		err = setHttpResponse(response, request->version, 203, strdup("test endpoint"));
 	}
 	else {
-		return serveFile(config->servingFolder, config->servingFolderLen, request, response);
+		err = serveFile(config->servingFolder, config->servingFolderLen, request, response);
 	}
 
-	return 1;
+	if (err != 0) {
+		err = serveError(config->servingFolder, config->servingFolderLen, request, response);
+	}
+
+	return err;
 }
 
 errno_t handleError(Config* config, HttpRequest* request, HttpResponse* response) {
