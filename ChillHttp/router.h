@@ -4,10 +4,19 @@
 #include "log/log.h"
 #include "config.h"
 #include "chillerrors.h"
+#include "string.h"
 
 
-typedef HttpResponse* (RouteHandler)(HttpRequest* request);;
+typedef errno_t (RouteHandler)(Config* config, HttpRequest* request, HttpResponse* response);
 
-errno_t registerRoute(const char* route, HTTP_METHOD method, RouteHandler routeHandler);
-errno_t handleRequest(Config* config, HttpRequest* request, HttpResponse* response);
+typedef struct Route {
+	const char* route;
+	HTTP_METHOD method;
+	RouteHandler* routeHandler;
+	bool catchAll;
+} Route;
+
+errno_t registerRoute(Route* route, const char* path, HTTP_METHOD method, RouteHandler routeHandler);
+errno_t handleRequest(Route* routes, size_t routesSize, Config* config, HttpRequest* request, HttpResponse* response);
 errno_t handleError(Config* config, HttpRequest* request, HttpResponse* response);
+errno_t serveFile(const char* servingFolder, size_t servingFolderLen, HttpRequest* request, HttpResponse* response);

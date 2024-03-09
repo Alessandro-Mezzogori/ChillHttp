@@ -181,20 +181,50 @@ _exit:
 	return 0;
 }
 
-errno_t registerRoute(const char* route, HTTP_METHOD method, RouteHandler routeHandler) {
-	// TODO implement
+errno_t registerRoute(Route* route, const char* path, HTTP_METHOD method, RouteHandler routeHandler) {
+	if(route == NULL || strlen(path) < 1) {
+		return EINVAL;
+	}
+
+	route->route = path;
+	route->catchAll = path[0] == '*';
+	route->method = method;
+	route->routeHandler = routeHandler;
+
+	return 0;
+}
+
+int compareRoute(const void* a, const void* b) {
+	Route* routeA = (Route*)a;
+	Route* routeB = (Route*)b;
+
+	if(!routeA && !routeB) return 0;
+	if(!routeA) return 1;
+	if(!routeB) return -1;
+
+	if(routeA->catchAll == true && routeB->catchAll == false) {
+		return 1;
+	}
+
+	if(routeA->catchAll == false && routeB->catchAll == true) {
+		return -1;
+	}
+
 	return 0;
 }
 
 // TODO better implementation, for now it just for a test
-errno_t handleRequest(Config* config, HttpRequest* request, HttpResponse* response) {
+errno_t handleRequest(Route* routes, size_t routesSize, Config* config, HttpRequest* request, HttpResponse* response) {
 	errno_t err = 0;
 
-	if (strcmp(request->path, "/test") == 0 && request->method == HTTP_POST) {
-		err = setHttpResponse(response, request->version, 203, strdup("test endpoint"));
-	}
-	else {
-		err = serveFile(config->servingFolder, config->servingFolderLen, request, response);
+	qsort_s(routes, routesSize, sizeof(Route), compareRoute, NULL);
+	for(size_t i = 0; i < routesSize; i++) {
+		Route route = routes[i];
+
+		if(route.method == request->method && (route.catchAll == true || strcmp(route.route, request->path) == 0)) {
+			err = route.routeHandler(config, request, response);
+			break;
+		}
 	}
 
 	if (err != 0) {

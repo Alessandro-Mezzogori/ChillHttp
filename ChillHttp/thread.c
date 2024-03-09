@@ -1,9 +1,8 @@
 #include "thread.h"
 
 
-errno_t buildResponse(HashTable headers, char* body) {
-	return 0;
-}
+#pragma region Pipeline
+
 
 errno_t noop_step(PipelineContext* context) {
 	LOG_INFO("[PipelineHandler]");
@@ -48,12 +47,14 @@ errno_t handleRequestStep(PipelineContext* context) {
 	const Config* config = context->config;
 	HttpRequest* request = context->request;
 	HttpResponse* response = context->response;
+	size_t routesize = context->routesSize;
+	Route* routes = context->routes;
 
 	errno_t err = 0;
 
 	err = handleError(config, request, response);
 	if (err == 1) {
-		err = handleRequest(config, request, response);
+		err = handleRequest(routes, routesize, config, request, response);
 		if(err != 0) {
 			LOG_ERROR("Error while handling request: %d", err);
 			return err;
@@ -62,6 +63,27 @@ errno_t handleRequestStep(PipelineContext* context) {
 
 	return next(context);
 }
+
+#pragma endregion
+
+#pragma region Routes 
+
+errno_t test_route(Config* config, HttpRequest* request, HttpResponse* response) {
+	LOG_INFO("[RouteHandler]");
+	return setHttpResponse(response, request->version, 203, strdup("test endpoint"));
+}
+
+errno_t test_route2(Config* config, HttpRequest* request, HttpResponse* response) {
+	LOG_INFO("[RouteHandler]");
+	return setHttpResponse(response, request->version, 203, strdup("test endpoint 2"));
+}
+
+errno_t serve_file(Config* config, HttpRequest* request, HttpResponse* response) {
+	LOG_INFO("[RouteHandler]");
+	return serveFile(config->servingFolder, config->servingFolderLen, request, response);
+}
+
+#pragma endregion
 
 DWORD threadFunction(void* lpParam) {
 	PSOCKTD pdata = (PSOCKTD)lpParam;
@@ -89,6 +111,12 @@ DWORD threadFunction(void* lpParam) {
 	steps[3].function = handleRequestStep;
 	steps[3].next = NULL;
 
+	size_t routeSize = 3;
+	Route routes[3];
+	registerRoute(routes, "/test", HTTP_POST, test_route);
+	registerRoute(routes + 1, "/test2", HTTP_POST, test_route2);
+	registerRoute(routes + 2, "*", HTTP_GET, serve_file);
+
 	do {
 		HttpRequest request;
 		errno_t err = recvRequest(socket, &request);
@@ -112,7 +140,9 @@ DWORD threadFunction(void* lpParam) {
 			&response,
 			&pdata->connectionData,
 			&mtData->config,
-			&steps[0]
+			&steps[0],
+			routes,
+			routeSize
 		};
 
 		errno_t pipelineError = startPipeline(&context);

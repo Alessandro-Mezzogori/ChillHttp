@@ -16,12 +16,32 @@
                             'Content-Type': 'application/json',
                             'Accept': '*/*'
                         },
-                        body: JSON.stringify({
-                            name: 'John'
-                        })
                     });
 
                     debugger;
+                    if (homeResponse.ok) {
+                        document.getElementById("preview").innerHTML = await homeResponse.text();
+                    }
+                    else {
+                        document.getElementById("preview").innerHTML = homeResponse.status;
+                    }
+
+                }
+                catch (err) {
+                    document.getElementById("preview").innerHTML = JSON.stringify(err, undefined, 2);
+                }
+            }
+
+            async function postTest2() {
+                try {
+                    const homeResponse = await fetch('/test2', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': '*/*'
+                        },
+                    });
+
                     if (homeResponse.ok) {
                         document.getElementById("preview").innerHTML = await homeResponse.text();
                     }
@@ -40,13 +60,15 @@
                 try {
                     const errorValue = document.getElementById("error").value;
 
+                    const headers = {
+                        'Content-Type': 'application/json',
+                        'Accept': '*/*',
+                        'TEST-ERROR': !!errorValue ? errorValue : undefined
+                    };
+
                     const response = await fetch('/', {
                         method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': '*/*',
-                            'TEST-ERROR': errorValue
-                        },
+                        headers: headers,
                     });
 
                     if (response.ok) {
@@ -69,6 +91,7 @@
         <p class="test">My first paragraph.</p>
         <button onclick="testClick()">Click me</button>
         <button onclick="postTest()">Home</button>
+        <button onclick="postTest2()">Test</button>
         <button onclick="errorTest()">Error</button>
         <input type="text" id="error" />
 

@@ -2,6 +2,7 @@
 #include "http.h"
 #include "connection.h"
 #include "config.h"
+#include "router.h"
 
 typedef struct PipelineContext PipelineContext;
 typedef struct PipelineStep PipelineStep;
@@ -16,11 +17,14 @@ struct PipelineContext {
 	ConnectionData* connectionData;
 	Config* const config;
 	PipelineStep* currentStep;
+
+	Route* routes;
+	size_t routesSize;
 } ;
 
 struct PipelineStep {
 	const char* name;
-	const errno_t* (*function)(PipelineContext*);
+	const errno_t (*function)(PipelineContext*);
 	const void* (*cleanup)(void);
 	const PipelineStep* next;
 };
