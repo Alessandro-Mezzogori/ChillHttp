@@ -277,8 +277,14 @@ errno_t recvRequest(SOCKET socket, HttpRequest* req) {
 	do {
 		recvResult = recv(socket, buffer + size, bufferchunk, 0);
 		if (recvResult < 0) {
-			LOG_ERROR("recv failed: %d", WSAGetLastError());
 			err = WSAGetLastError();
+			if(err == WSAETIMEDOUT) {
+				LOG_WARN("Socket Timeout for socket %d", socket);
+			}
+			else {
+				LOG_ERROR("recv failed: %d", err);
+			}
+
 			goto _cleanup_request;
 		}
 

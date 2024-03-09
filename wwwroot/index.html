@@ -35,6 +35,32 @@
                 }
 
             }
+
+            async function errorTest() {
+                try {
+                    const homeResponse = await fetch('/', {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': '*/*',
+                            'TEST-ERROR': '400'
+                        },
+                    });
+
+                    debugger;
+                    if (homeResponse.ok) {
+                        document.getElementById("preview").innerHTML = await homeResponse.text();
+                    }
+                    else {
+                        document.getElementById("preview").innerHTML = homeResponse.status;
+                    }
+
+                }
+                catch (err) {
+                    document.getElementById("preview").innerHTML = JSON.stringify(err, undefined, 2);
+                }
+
+            }
         </script>
     </head>
     <body>
@@ -42,6 +68,7 @@
         <p class="test">My first paragraph.</p>
         <button style="" onclick="testClick()">Click me</button>
         <button style="" onclick="postTest()">Home</button>
+        <button style="" onclick="errorTest()">Error</button>
 
         <pre id="preview">
         </pre>

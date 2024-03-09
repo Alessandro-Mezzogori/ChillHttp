@@ -3,6 +3,7 @@
 #include "http.h"
 #include "log/log.h"
 #include "config.h"
+#include "chillerrors.h"
 
 
 typedef HttpResponse* (RouteHandler)(HttpRequest* request);;

@@ -58,18 +58,15 @@ FILE* openServingFolderFile(const char* servingFolder, size_t servingFolderLen, 
 		}
 	}
 
-	file = NULL;
 	openFileErr = fopen_s(&file, filePath, "r");
 	if (openFileErr != 0 || file == NULL) {
 		LOG_ERROR("Error while opening file: %s (fopen_s error) %d", filePath, openFileErr);
 		goto _failure;
 	}
 
-	return file;
-
 _failure:
 	free(filePath);
-	return NULL;
+	return file;
 }
 
 errno_t readTxtFile(FILE* file, char** out, size_t chunkSize) {
@@ -141,6 +138,49 @@ _exit:
 	return 0;
 }
 
+errno_t serveError(const char* servingFolder, size_t servingFolderLen, HttpRequest* request, HttpResponse* response) {
+	if(response == NULL) {
+		return EINVAL;
+	}
+
+	if(response->statusCode < 400 || response->statusCode > 599) {
+		return EINVAL;
+	}
+
+	size_t filePathLength = servingFolderLen + 8 + 3 + 5 + 1;
+	char* filePath = (char*) calloc(filePathLength + 1, sizeof(char));
+	sprintf_s(filePath, filePathLength, "%s\\errors\\%hu.html", servingFolder, response->statusCode);
+
+	char* fileContent = NULL;
+	errno_t readErr = 0;
+	FILE* file = NULL;
+	errno_t openFileErr = fopen_s(&file, filePath, "r");
+	if (openFileErr != 0 || file == NULL) {
+		LOG_ERROR("Error while opening file: %s (fopen_s error) %d", filePath, openFileErr);
+		goto _failure;
+	}
+
+	readErr = readTxtFile(file, &fileContent, 4096);
+	fclose(file);
+	if (readErr != 0) {
+		goto _exit_with_cleanup;
+	}
+
+	unsigned short statusCode = response->statusCode == 0 ? 500 : response->statusCode;
+	setHttpResponse(response, request->version, statusCode, fileContent);
+
+	free(filePath);
+	goto _exit;
+
+_exit_with_cleanup:
+	free(fileContent);
+_failure:
+	free(filePath);
+	setHttpResponse(response, request->version, 500, strdup("Internal Server Error"));
+_exit:
+	return 0;
+}
+
 errno_t registerRoute(const char* route, HTTP_METHOD method, RouteHandler routeHandler) {
 	// TODO implement
 	return 0;
@@ -148,6 +188,11 @@ errno_t registerRoute(const char* route, HTTP_METHOD method, RouteHandler routeH
 
 // TODO better implementation, for now it just for a test
 errno_t handleRequest(Config* config, HttpRequest* request, HttpResponse* response) {
+	errno_t err = serveError(config->servingFolder, config->servingFolderLen, request, response);
+	if (err == 0) {
+		return 0;
+	}
+
 	if (strcmp(request->path, "/test") == 0 && request->method == HTTP_POST) {
 		return setHttpResponse(response, request->version, 203, strdup("test endpoint"));
 	}

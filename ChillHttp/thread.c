@@ -10,6 +10,23 @@ errno_t noop_step(PipelineContext* context) {
 	return next(context);
 }
 
+errno_t test_error_step(PipelineContext* context) {
+	LOG_INFO("[PipelineHandler]");
+	HttpRequest* request = context->request;
+	HttpResponse* response = context->response;
+	ConnectionData* connectionData = context->connectionData;
+
+	// close connection if Connection: close header is present
+	HashEntry* connection = hashtableLookup(request->headers, "TEST-ERROR");
+	if (connection != NULL) {
+		unsigned short error = strtol(connection->value, NULL, 10);
+		response->statusCode = error;
+	}
+
+	// if next step is present, call it
+	return next(context);
+}
+
 errno_t handleConnectionHeader(PipelineContext* context) {
 	LOG_INFO("[PipelineHandler]");
 	HttpRequest* request = context->request;
@@ -50,18 +67,22 @@ DWORD threadFunction(void* lpParam) {
 	LOG_INFO("Thread {%d} socket: {%d} initiliazed", threadId, socket);
 
 	// solo un modo per autoallocare la memoria in maniera temporanea 
-	PipelineStep steps[3];
+	PipelineStep steps[4];
 	steps[0].name = "connection closer";
 	steps[0].function = handleConnectionHeader;
 	steps[0].next = &steps[1];
 
-	steps[1].name = "noop";
-	steps[1].function = noop_step;
+	steps[1].name = "test error";
+	steps[1].function = test_error_step;
 	steps[1].next = &steps[2];
 
-	steps[2].name = "handle request";
-	steps[2].function = handleRequestStep;
-	steps[2].next = NULL;
+	steps[2].name = "noop";
+	steps[2].function = noop_step;
+	steps[2].next = &steps[3];
+
+	steps[3].name = "handle request";
+	steps[3].function = handleRequestStep;
+	steps[3].next = NULL;
 
 	do {
 		HttpRequest request;
