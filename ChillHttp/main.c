@@ -79,7 +79,6 @@ DWORD cleanupThreadFunction(void* lpParam) {
 	return 0;
 }
 
-
 int main() { 
 	setlocale(LC_ALL, "");
 

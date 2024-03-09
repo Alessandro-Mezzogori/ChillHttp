@@ -5,8 +5,10 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include "elua.h"
 
-#define CONFIG_PATH "conf.txt"
+#define CONFIG_PATH_TEXT "conf.txt"
+#define CONFIG_PATH_LUA "conf.lua"
 #define MAX_CONFIG_LINE_LEN 256
 #define MAX_CONFIG_PORT_LEN 6
 

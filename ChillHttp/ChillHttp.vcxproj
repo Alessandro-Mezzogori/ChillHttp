@@ -134,6 +134,7 @@
     <ClCompile Include="config.c" />
     <ClCompile Include="hashtable.c" />
     <ClCompile Include="http.c" />
+    <ClCompile Include="elua.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="log\log.c" />
     <ClCompile Include="pipeline.c" />
@@ -147,6 +148,7 @@
     <ClInclude Include="hashtable.h" />
     <ClInclude Include="http.h" />
     <ClInclude Include="log\log.h" />
+    <ClInclude Include="elua.h" />
     <ClInclude Include="pipeline.h" />
     <ClInclude Include="router.h" />
     <ClInclude Include="thread.h" />

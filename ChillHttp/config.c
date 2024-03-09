@@ -1,5 +1,28 @@
 #include "config.h"
 
+void parse_lua_conf(lua_State* L, void* data) {
+	lua_getglobal(L, "conf");
+	Config* conf = (Config*) data;
+
+	if(lua_istable(L, -1)){
+		getfield(L, "PORT", LUA_TYPE_STRING, conf->port);
+		getfield(L, "MAX_CONCURRENT_THREADS", LUA_TYPE_SIZE_T, &conf->maxConcurrentThreads);
+		getfield(L, "SERVING_FOLDER", LUA_TYPE_STRING, conf->servingFolder);
+		getfield(L, "RECV_TIMEOUT", LUA_TYPE_INT, &conf->recvTimeout);
+		conf->servingFolderLen = strlen(conf->servingFolder);
+	}
+	else {
+		LOG_ERROR("conf is not a table");
+	}
+	
+	return 0;
+}
+
+errno_t loadConfig(Config* config) {
+	launch_lua_script_standalone(CONFIG_PATH_LUA, parse_lua_conf, config);
+}
+
+/*
 errno_t loadConfig(Config* config) {
 	errno_t err = 0;
 	FILE* file = NULL;
@@ -40,3 +63,4 @@ errno_t loadConfig(Config* config) {
 
 	return 0;
 }
+*/
