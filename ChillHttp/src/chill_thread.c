@@ -53,16 +53,16 @@ DWORD threadFunction(void* lpParam) {
 		registerRoute(routes + 2, "*", HTTP_GET, serve_file);
 
 
-		PipelineContext context = {
-			&request,
-			&response,
-			&pdata->connectionData,
-			&mtData->config,
-			routes,
-			routeSize,
+		PipelineContextInit context = {
+			.request = &request,
+			.response = &response,
+			.connectionData = &pdata->connectionData,
+			.config = &mtData->config,
+			.routes = routes,
+			.routesSize = routeSize,
 		};
 
-		errno_t pipelineError = startPipeline(&context);
+		errno_t pipelineError = runPipeline(&context);
 		if(pipelineError != 0) {
 			LOG_ERROR("Error while handling request: %d", pipelineError);
 			// TODO short circuit with a stackalloced response 500 or some other error

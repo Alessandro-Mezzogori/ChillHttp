@@ -2,7 +2,12 @@
 function test_func1(args) 
     log.trace("##### start test_func 1 #####")
     
-    pipeline.next(args);
+    print("routes len %d", #routes)
+    print(routes[1])
+    print(routes[1].path)
+    print(routes[1].method)
+    
+    -- pipeline.next(args);
 
     log.trace("##### end test_func 1 #####")
 end
@@ -21,8 +26,8 @@ return {
         id = "test_step_1",
         handler = test_func1,
     },
-    {
-        id = "handle_request",
-        handler = handle_request_func,
-    }
+--    {
+--        id = "handle_request",
+--        handler = handle_request_func,
+--    }
 };

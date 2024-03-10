@@ -50,5 +50,4 @@ struct PipelineContext {
 };
 
 // errno_t next(PipelineContext* context);
-errno_t startPipeline(PipelineContextInit* init);
-errno_t closePipeline(PipelineContext* context);
+errno_t runPipeline(PipelineContextInit* init);
