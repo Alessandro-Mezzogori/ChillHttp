@@ -13,7 +13,8 @@ HashEntry* hashtableLookup(HashTable* hashtable, char* s) {
 		return NULL;
 	}
 
-	HashEntry* entry = hashtable->entries[hashtableHash(s)];
+	unsigned hash = hashtableHash(s);
+	HashEntry* entry = hashtable->entries[hash];
 	while (entry != NULL) {
 		if(strcmp(s, entry->name) == 0) {
 			return entry;

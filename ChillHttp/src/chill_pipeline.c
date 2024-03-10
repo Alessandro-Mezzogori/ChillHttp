@@ -7,6 +7,22 @@
 #define PIPELINE_ROUTES_META "chill.routes"
 #define PIPELINE_ROUTES_ROUTE_META "chill.routes.route"
 #define PIPELINE_CONFIG_META "chill.config"
+#define PIPELINE_HASHTABLE_META "chill.hashtable"
+
+#define PIPELINE_HTTPREQUEST_META "chill.http.request"
+#define HTTPREQUEST_HEADER_INDEX 1
+
+#define PIPELINE_HTTPRESPONSE_META "chill.http.response"
+
+#define PIPELINE_CONTEXT_REQUEST_INDEX 1
+
+typedef struct HashTableWrapper {
+	HashTable* ht;
+} HashTableWrapper;
+
+typedef struct HttpRequestWrapper {
+	HttpRequest* request;
+} HttpRequestWrapper;
 
 typedef struct RoutesWrapper {
 	Route* routes;
@@ -61,7 +77,19 @@ errno_t runPipeline(PipelineContextInit* init) {
 	lua_setmetatable(L, -2);
 	lua_setglobal(L, "config");
 
-	lua_len(L, -1);
+	HttpRequestWrapper* requestWrapper = (HttpRequestWrapper*) lua_newuserdata(L, sizeof(HttpRequestWrapper));
+	requestWrapper->request = init->request;
+	luaL_getmetatable(L, PIPELINE_HTTPREQUEST_META);
+	lua_setmetatable(L, -2);
+
+	HashTableWrapper* requestHeaderWrapper = (HashTableWrapper*) lua_newuserdata(L, sizeof(HashTableWrapper));
+	requestHeaderWrapper->ht = init->request->headers;
+	luaL_getmetatable(L, PIPELINE_HASHTABLE_META);
+	lua_setmetatable(L, -2);
+	lua_setiuservalue(L, -2, HTTPREQUEST_HEADER_INDEX);
+
+	stackDump(L);
+	lua_len(L, -2);
 	int tableLen = lua_tointeger(L, -1);
 	LOG_TRACE("Pipeline table length: %d", tableLen);
 	lua_pop(L, 1);
@@ -86,6 +114,9 @@ errno_t runPipeline(PipelineContextInit* init) {
 
 	luaL_getmetatable(L, PIPELINE_STEP_ARGS_META);
 	lua_setmetatable(L, -2);
+
+	lua_insert(L, -2);	// move usedata before function)
+	lua_setiuservalue(L, -2, PIPELINE_CONTEXT_REQUEST_INDEX);
 
 	lua_insert(L, -2);	// move usedata before function)
 	setupPipeline(L, a);
@@ -191,11 +222,82 @@ errno_t closePipeline(lua_State* L, PipelineContext* context) {
 //	- a table as input containing generic info about the step
 //  - a function to call to pass the result to the next step
 
-#pragma region PipelineContextRequestLua
+#pragma region PipelineHashtable
 
-static const struct luaL_Reg pipeline_arg_m[] = {
+static const int hashtable_index(lua_State* L);
+
+static const struct luaL_Reg hashtable_m[] = {
+	{"__index", hashtable_index},
 	{NULL, NULL}
 };
+
+static const int hashtable_index(lua_State* L) {
+	HashTableWrapper* wrapper = (HashTableWrapper*) luaL_checkudata(L, 1, PIPELINE_HASHTABLE_META);
+	const char* key = luaL_checkstring(L, -1);
+
+	hashtablePrint(stdout, wrapper->ht);
+
+	HashEntry* value = hashtableLookup(wrapper->ht, key);
+
+	if(value != NULL) {
+		lua_pushstring(L, value->value);
+	}
+	else {
+		lua_pushnil(L);
+	}
+
+	return 1;
+}
+
+#pragma endregion
+
+#pragma region PipelineHttpRequestLua
+
+static int request_index(lua_State* L);
+static int request_newindex(lua_State* L);
+
+static const struct luaL_Reg http_request_m[] = {
+	{"__index", request_index},
+	{"__newindex", request_newindex},
+	{NULL, NULL}
+};
+
+static request_index(lua_State* L) {
+	HttpRequestWrapper* wrapper = (HttpRequestWrapper*) luaL_checkudata(L, 1, PIPELINE_HTTPREQUEST_META);
+	HttpRequest* request = wrapper->request;
+
+	const char* key = luaL_checkstring(L, -1);
+
+	if(strcmp(key, "method") == 0) {
+		// TODO translate method to string, expose method in http.c
+		lua_pushinteger(L, request->method);
+	}
+	else if(strcmp(key, "path") == 0) {
+		lua_pushstring(L, request->path);
+	}
+	else if(strcmp(key, "version") == 0) {
+		// TODO translate version to string, expose version in http.c
+		lua_pushinteger(L, request->version);
+	}
+	else if(strcmp(key, "body") == 0) {
+		// TODO translate version to string, expose version in http.c
+		lua_pushstring(L, request->body);
+	}
+	else if(strcmp(key, "headers") == 0) {
+		lua_getiuservalue(L, -2, HTTPREQUEST_HEADER_INDEX);
+	}
+	else {
+		lua_pushnil(L);
+	}
+
+	return 1;
+}
+
+static int request_newindex(lua_State* L) {
+	luaL_error(L, "Request table is read only");
+	return 0;
+}
+
 
 #pragma endregion
 
@@ -245,7 +347,50 @@ static int config_newindex(lua_State* L) {
 
 #pragma endregion
 
+#pragma region PipelineContextArgs 
+
+static int args_index(lua_State* L);
+
+static const struct luaL_Reg args_m[] = {
+	{"__index", args_index},
+	{NULL, NULL}
+};
+
+static int args_index(lua_State* L) {
+	PipelineContext* context = (PipelineContext*) luaL_checkudata(L, 1, PIPELINE_STEP_ARGS_META);
+	const char* key = luaL_checkstring(L, -1);
+
+	size_t pipeline_f_size = sizeof(args_m) / sizeof(struct luaL_Reg);
+	for(int i = 0; i < pipeline_f_size; i++) {
+		if(args_m[i].name != NULL && strcmp(args_m[i].name, key) == 0) {
+			lua_pushcfunction(L, args_m[i].func);
+			return 1;
+		}
+	}
+
+	if (strcmp(key, "request") == 0) {
+		lua_getiuservalue(L, -2, PIPELINE_CONTEXT_REQUEST_INDEX);
+	}
+	else {
+		lua_pushnil(L);
+	}
+
+	return 1;
+}
+
+#pragma endregion
+
+
 #pragma region PipelineContextLua
+
+static int context_next(lua_State* L);
+static int context_handlerequest(lua_State* L);
+
+static const struct luaL_Reg pipeline_f[] = {
+	{"next", context_next},
+	{"handleRequest", context_handlerequest},
+	{NULL, NULL}
+};
 
 static int context_next(lua_State* L) {
 	PipelineContext* context = (PipelineContext*) luaL_checkudata(L, 1, PIPELINE_STEP_ARGS_META);
@@ -292,12 +437,6 @@ static int context_handlerequest(lua_State* L) {
 
 	return 0;
 }
-
-static const struct luaL_Reg pipeline_f[] = {
-	{"next", context_next},
-	{"handleRequest", context_handlerequest},
-	{NULL, NULL}
-};
 
 
 #pragma endregion
@@ -404,7 +543,7 @@ static const int routes_index(lua_State* L) {
 		const char* key = luaL_checkstring(L, -1);
 		size_t route_f_size = sizeof(routes_f) / sizeof(struct luaL_Reg);
 		for(int i = 0; i < route_f_size; i++) {
-			if(strcmp(routes_f[i].name, key) == 0) {
+			if(routes_f[i].name != NULL && strcmp(routes_f[i].name, key) == 0) {
 				lua_pushcfunction(L, routes_f[i].func);
 				return 1;
 			}
@@ -436,7 +575,7 @@ static int luaopen_pipeline(lua_State* L) {
 	lua_setglobal(L, "log");			// set the table as global
 
 	luaL_newmetatable(L, PIPELINE_STEP_ARGS_META);
-	luaL_setfuncs(L, pipeline_arg_m, 0);
+	luaL_setfuncs(L, args_m, 0);
 	lua_pop(L, 1);
 
 	luaL_newmetatable(L, PIPELINE_ROUTES_META);
@@ -449,6 +588,14 @@ static int luaopen_pipeline(lua_State* L) {
 
 	luaL_newmetatable(L, PIPELINE_CONFIG_META);
 	luaL_setfuncs(L, config_f, 0);
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, PIPELINE_HASHTABLE_META);
+	luaL_setfuncs(L, hashtable_m, 0);
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, PIPELINE_HTTPREQUEST_META);
+	luaL_setfuncs(L, http_request_m, 0);
 	lua_pop(L, 1);
 
 	return 1;
