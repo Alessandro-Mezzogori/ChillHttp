@@ -1,27 +1,28 @@
 
-function test_func1(ctx) 
+function test_func1(args) 
     log.trace("##### start test_func 1 #####")
     
-    ctx:next();
+    pipeline.next(args);
 
     log.trace("##### end test_func 1 #####")
 end
 
-function test_func2(ctx) 
-    log.trace("##### start test_func 2 #####")
+function handle_request_func(args) 
+    log.trace("##### start handle_request_func #####")
     
-    ctx:next();
-
-    log.trace("##### end test_func 2 #####")
+    pipeline.next(args);
+    pipeline.handleRequest(args);
+    
+    log.trace("##### end handle_request_func #####")
 end
 
 return {
     {
-        id = "lua_step_0",
+        id = "test_step_1",
         handler = test_func1,
     },
     {
-        id = "lua_step_1",
-        handler = test_func2,
+        id = "handle_request",
+        handler = handle_request_func,
     }
 };

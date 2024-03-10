@@ -2,9 +2,38 @@
 
 #define PIPELINE_STEP_META "chill.pipeline"
 #define PIPELINE_CONTEXT_META "chill.pipeline.context"
+#define PIPELINE_STEP_ARGS_META "chill.pipeline.stepargs"
 
 errno_t next(PipelineContext* context) {
 	return 0;
+}
+
+errno_t request2lua(lua_State* L, HttpRequest* request) {
+	lua_newtable(L);
+	lua_pushinteger(L, request->method);
+	lua_setfield(L, -2, "method");
+
+	lua_pushstring(L, request->path);
+	lua_setfield(L, -2, "path");
+
+	lua_pushstring(L, request->body);
+	lua_setfield(L, -2, "body");
+
+	lua_newtable(L);
+
+	HashTable* ht = request->headers;
+	for (int i = 0; i < HASHSIZE; i++) {
+		HashEntry* entry = ht->entries[i];
+		while (entry != NULL) {
+			lua_pushstring(L, entry->value);
+			lua_setfield(L, -2, entry->name);
+
+			entry = entry->next;
+		}
+	}
+
+	stackDump(L);
+	lua_setfield(L, -2, "headers");
 }
 
 errno_t startPipeline(PipelineContextInit* init) {
@@ -45,56 +74,21 @@ errno_t startPipeline(PipelineContextInit* init) {
 		step->id[0] = 0;
 	}
 
-	stackDump(L);
-	lua_insert(L, -2);		// move userdata after the steps table
-	stackDump(L);
-	setupPipeline(L, a);
-	stackDump(L);
-	lua_insert(L, -2);		// move steps table after use data
-	stackDump(L);
-
-	luaL_getmetatable(L, PIPELINE_CONTEXT_META);
+	luaL_getmetatable(L, PIPELINE_STEP_ARGS_META);
 	lua_setmetatable(L, -2);
-	stackDump(L);
+
+	lua_insert(L, -2);	// move usedata before function)
+	setupPipeline(L, a);
+	lua_insert(L, -2);	// move usedata before function)
 
 	if(a->stepsSize == 0) {
 		LOG_ERROR("No steps in pipeline");
+		closePipeline(L, a);
 		return -1;
 	}
 
-
 	lua_rawgeti(L, LUA_REGISTRYINDEX, a->steps[0].handlerRef);	// push function
-	lua_insert(L, -2);		// move usedata before function 
-	stackDump(L);
-
-	/*
-	lua_newtable(L);
-	lua_pushinteger(L, request->method);
-	lua_setfield(L, -2, "method");
-
-	lua_pushstring(L, request->path);
-	lua_setfield(L, -2, "path");
-
-	lua_pushstring(L, request->body);
-	lua_setfield(L, -2, "body");
-
-	lua_newtable(L);
-
-	HashTable* ht = request->headers;
-	for (int i = 0; i < HASHSIZE; i++) {
-		HashEntry* entry = ht->entries[i];
-		while (entry != NULL) {
-			lua_pushstring(L, entry->value);
-			lua_setfield(L, -2, entry->name);
-
-			entry = entry->next;
-		}
-	}
-
-	stackDump(L);
-	lua_setfield(L, -2, "headers");
-	stackDump(L);
-	*/
+	lua_insert(L, -2);	// move usedata before function)
 
 	if (lua_isfunction(L, -2)) {
 		int err = lua_pcall(L, 1, 0, 0);
@@ -187,24 +181,26 @@ errno_t closePipeline(lua_State* L, PipelineContext* context) {
 //	- a table as input containing generic info about the step
 //  - a function to call to pass the result to the next step
 
+#pragma region PipelineContextRequestLua
+
+
+
+#pragma endregion
+
 #pragma region PipelineContextLua
 
-static int global_test(lua_State* L) {
-	lua_pushinteger(L, 42);
-	return 1;
-}
 
-static int context_test(lua_State* L) {
-	PipelineContext* context = (PipelineContext*) luaL_checkudata(L, 1, PIPELINE_CONTEXT_META);
-	LOG_INFO("test: %d", context->routesSize);
+static int context_next(lua_State* L);
+static int context_handlerequest(lua_State* L);
 
-	lua_pushboolean(L, true);
-
-	return 1;
-}
+static const struct luaL_Reg pipeline_m[] = {
+	{"next", context_next},
+	{"handleRequest", context_handlerequest},
+	{NULL, NULL}
+};
 
 static int context_next(lua_State* L) {
-	PipelineContext* context = (PipelineContext*) luaL_checkudata(L, 1, PIPELINE_CONTEXT_META);
+	PipelineContext* context = (PipelineContext*) luaL_checkudata(L, 1, PIPELINE_STEP_ARGS_META);
 
 	context->currentStep += 1;
 	if(context->currentStep >= context->stepsSize) {
@@ -226,16 +222,28 @@ static int context_next(lua_State* L) {
 	return 0;
 }
 
-static const struct luaL_Reg context_f[] = {
-	{"test", global_test},
-	{NULL, NULL}
-};
+static int context_handlerequest(lua_State* L) {
+	PipelineContext* context = (PipelineContext*) luaL_checkudata(L, 1, PIPELINE_STEP_ARGS_META);
 
-static const struct luaL_Reg context_m[] = {
-	{"test", context_test},
-	{"next", context_next},
-	{NULL, NULL}
-};
+	Config* config = context->config;
+	HttpRequest* request = context->request;
+	HttpResponse* response = context->response;
+	size_t routesize = context->routesSize;
+	Route* routes = context->routes;
+
+	errno_t err = 0;
+	err = handleError(config, request, response);
+	if (err == 1) {
+		err = handleRequest(routes, routesize, config, request, response);
+		if(err != 0) {
+			LOG_ERROR("Error while handling request: %d", err);
+			luaL_error(L, "Error while handling request: %d", err);
+			return 0;
+		}
+	}
+
+	return 0;
+}
 
 #pragma endregion
 
@@ -291,18 +299,14 @@ static const struct luaL_Reg logger_f[] = {
 #pragma endregion
 
 static int luaopen_pipeline(lua_State* L) {
-	luaL_newmetatable(L, PIPELINE_CONTEXT_META);
-
-	lua_pushstring(L, "__index");		// 
-	lua_pushvalue(L, -2);				// copy the metatable
-	lua_settable(L, -3);				// metatable.__index = metatable
-
-	luaL_setfuncs(L, context_m, 0);		// register methods
-	luaL_newlib(L, context_f);			// create a new table and register functions
-	lua_setglobal(L, "context");		// set the table as global
+	luaL_newlib(L, pipeline_m);			// create a new table and register functions
+	lua_setglobal(L, "pipeline");		// set the table as global
 
 	luaL_newlib(L, logger_f);			// create a new table and register functions
 	lua_setglobal(L, "log");			// set the table as global
+
+	luaL_newmetatable(L, PIPELINE_STEP_ARGS_META);
+	lua_pop(L, 1);
 
 	return 1;
 }
