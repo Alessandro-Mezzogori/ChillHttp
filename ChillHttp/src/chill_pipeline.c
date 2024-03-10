@@ -17,6 +17,10 @@ typedef struct RouteWrapper {
 	Route* route;
 } RouteWrapper;
 
+typedef struct ConfigWrapper {
+	Config* config;
+} ConfigWrapper;
+
 errno_t runPipeline(PipelineContextInit* init) {
 	// setup context
 	// call first step
@@ -50,6 +54,12 @@ errno_t runPipeline(PipelineContextInit* init) {
 	}
 
 	lua_setglobal(L, "routes");
+
+	ConfigWrapper* configWrapper = (ConfigWrapper*) lua_newuserdata(L, sizeof(ConfigWrapper));
+	configWrapper->config = init->config;
+	luaL_getmetatable(L, PIPELINE_CONFIG_META);
+	lua_setmetatable(L, -2);
+	lua_setglobal(L, "config");
 
 	lua_len(L, -1);
 	int tableLen = lua_tointeger(L, -1);
@@ -186,6 +196,52 @@ errno_t closePipeline(lua_State* L, PipelineContext* context) {
 static const struct luaL_Reg pipeline_arg_m[] = {
 	{NULL, NULL}
 };
+
+#pragma endregion
+
+#pragma region LuaConfig
+
+static int config_index(lua_State* L);
+static int config_newindex(lua_State* L);
+
+static const struct luaL_Reg config_f[] = {
+	{"__index", config_index},
+	{"__newindex", config_newindex},
+	{NULL, NULL}
+};
+
+static int config_index(lua_State* L){
+	ConfigWrapper* wrapper = (ConfigWrapper*) luaL_checkudata(L, 1, PIPELINE_CONFIG_META);
+	Config* config = wrapper->config;
+
+	const char* key = luaL_checkstring(L, -1);
+
+	if(strcmp(key, "port") == 0) {
+		lua_pushstring(L, config->port);
+	}
+	else if(strcmp(key, "servingFolder") == 0) {
+		lua_pushstring(L, config->servingFolder);
+	}
+	else if(strcmp(key, "servingFolderLen") == 0) {
+		lua_pushinteger(L, config->servingFolderLen);
+	}
+	else if(strcmp(key, "recvTimeout") == 0) {
+		lua_pushinteger(L, config->recvTimeout);
+	}
+	else if(strcmp(key, "maxConcurrentThreads") == 0) {
+		lua_pushinteger(L, config->maxConcurrentThreads);
+	}
+	else {
+		lua_pushnil(L);
+	}
+
+	return 1;
+}
+
+static int config_newindex(lua_State* L) {
+	luaL_error(L, "Config table is read only");
+	return 0;
+}
 
 #pragma endregion
 
@@ -389,6 +445,10 @@ static int luaopen_pipeline(lua_State* L) {
 
 	luaL_newmetatable(L, PIPELINE_ROUTES_ROUTE_META);
 	luaL_setfuncs(L, route_m, 0);
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, PIPELINE_CONFIG_META);
+	luaL_setfuncs(L, config_f, 0);
 	lua_pop(L, 1);
 
 	return 1;

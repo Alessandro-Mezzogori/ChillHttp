@@ -1,4 +1,5 @@
 
+
 function test_func1(args) 
     log.trace("##### start test_func 1 #####")
     
@@ -7,6 +8,9 @@ function test_func1(args)
     print(routes[1].path)
     print(routes[1].method)
     
+    print("port " .. config.port)
+    print("max concurrent threads " .. tostring(config.maxConcurrentThreads))
+
     -- pipeline.next(args);
 
     log.trace("##### end test_func 1 #####")
