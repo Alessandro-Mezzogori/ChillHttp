@@ -1,24 +1,27 @@
 
---function test_func(request) 
---    print("##### start test_func #####")
---
---    print(request.method);
---    print(request.path);
---
---    print("##### end test_func #####")
---end
+function test_func1(ctx) 
+    log.trace("##### start test_func 1 #####")
+    
+    ctx:next();
 
-a = array.new(1000)
-for i = 1, 1000 do
-    a[i] = i % 2 == 0 -- a[i] = (i % 2 == 0)
+    log.trace("##### end test_func 1 #####")
 end
-print(a[10]) --> true
-print(a[11]) --> false
-print(#a) --> 1000
 
-table = {};
---table[1] = {
---    name = "lua step",
---    handler = test_func,
---}
-return table;
+function test_func2(ctx) 
+    log.trace("##### start test_func 2 #####")
+    
+    ctx:next();
+
+    log.trace("##### end test_func 2 #####")
+end
+
+return {
+    {
+        id = "lua_step_0",
+        handler = test_func1,
+    },
+    {
+        id = "lua_step_1",
+        handler = test_func2,
+    }
+};

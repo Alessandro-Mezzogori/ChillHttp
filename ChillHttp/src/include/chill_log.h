@@ -42,11 +42,27 @@ void flushLogger(FILE* out);
 	} \
 } while(0)
 
+#define LOG_R(level, func, line, fmt, ...) do { \
+	if (SHOULD_LOG(level)) { \
+		logger(LOG_FP, level, func, line, fmt, __VA_ARGS__); \
+	} \
+} while(0)
+
 #define LOG_TRACE(fmt, ...) LOG(LL_TRACE, fmt, __VA_ARGS__) 
 #define LOG_DEBUG(fmt, ...) LOG(LL_DEBUG, fmt, __VA_ARGS__)
-#define LOG_INFO(fmt, ...) LOG(LL_INFO, fmt, __VA_ARGS__)
-#define LOG_WARN(fmt, ...) LOG(LL_WARN, fmt, __VA_ARGS__)
+#define LOG_INFO(fmt, ...)  LOG(LL_INFO, fmt, __VA_ARGS__)
+#define LOG_WARN(fmt, ...)  LOG(LL_WARN, fmt, __VA_ARGS__)
 #define LOG_ERROR(fmt, ...) LOG(LL_ERROR, fmt, __VA_ARGS__)	
 #define LOG_FATAL(fmt, ...) LOG(LL_FATAL, fmt, __VA_ARGS__)	
+
+
+#define LOG_TRACE_R(fmt, func, line, ...) LOG_R(LL_TRACE, func, line, fmt, __VA_ARGS__) 
+#define LOG_DEBUG_R(fmt, func, line, ...) LOG_R(LL_DEBUG, func, line, fmt, __VA_ARGS__)
+#define LOG_INFO_R(fmt, func, line, ...)  LOG_R(LL_INFO , func, line, fmt, __VA_ARGS__)
+#define LOG_WARN_R(fmt, func, line, ...)  LOG_R(LL_WARN , func, line, fmt, __VA_ARGS__)
+#define LOG_ERROR_R(fmt, func, line, ...) LOG_R(LL_ERROR, func, line, fmt, __VA_ARGS__)	
+#define LOG_FATAL_R(fmt, func, line, ...) LOG_R(LL_FATAL, func, line, fmt, __VA_ARGS__)	
+
 #define LOG_FLUSH() flushLogger(LOG_FP)
+
 

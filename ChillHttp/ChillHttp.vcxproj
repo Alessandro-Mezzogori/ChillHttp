@@ -156,7 +156,7 @@
     <ClInclude Include="src\include\chill_http.h" />
     <ClInclude Include="src\include\chill_list.h" />
     <ClInclude Include="src\include\chill_log.h" />
-    <ClInclude Include="src\include\chill_lua_api.h" />
+    <ClInclude Include="src\include\chill_lua_boolean_array.h" />
     <ClInclude Include="src\include\chill_pipeline.h" />
     <ClInclude Include="src\include\chill_router.h" />
     <ClInclude Include="src\include\chill_socket.h" />

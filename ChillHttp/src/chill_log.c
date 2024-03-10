@@ -29,7 +29,7 @@ int logger(FILE* out, const enum LOG_LEVEL lvl, char* const func, const unsigned
 	va_end(argptr);
 
 	// Printing actual log
-	fprintf_s(out, "[%s] %s: %s:%d %s\n", log_level_strings[lvl], time, func, line, buffer);
+	fprintf_s(out, "%s | %s | %-3d:%-25s | %s\n", time, log_level_strings[lvl], line, func, buffer);
 
 	// Flushing log file
 	// Not super efficient, but it's for ease of use 
