@@ -156,6 +156,7 @@
     <ClInclude Include="src\include\chill_http.h" />
     <ClInclude Include="src\include\chill_list.h" />
     <ClInclude Include="src\include\chill_log.h" />
+    <ClInclude Include="src\include\chill_lua_api.h" />
     <ClInclude Include="src\include\chill_pipeline.h" />
     <ClInclude Include="src\include\chill_router.h" />
     <ClInclude Include="src\include\chill_socket.h" />
@@ -168,6 +169,7 @@
     <ClCompile Include="src\chill_hashtable.c" />
     <ClCompile Include="src\chill_http.c" />
     <ClCompile Include="src\chill_log.c" />
+    <ClCompile Include="src\chill_lua_api.c" />
     <ClCompile Include="src\chill_main.c" />
     <ClCompile Include="src\chill_pipeline.c" />
     <ClCompile Include="src\chill_router.c" />

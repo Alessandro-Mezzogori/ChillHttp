@@ -1,4 +1,5 @@
 #include <chill_thread.h>
+#include <chill_lua_api.h>
 
 
 #pragma region Pipeline
@@ -12,6 +13,8 @@ errno_t noop_step(PipelineContext* context) {
 	LOG_TRACE("[PipelineHandler] - Lua state");
 	lua_State* L = luaL_newstate();
 	luaL_openlibs(L);
+	luaopen_array(L);
+
 
 	int r = luaL_dofile(L, "pipeline.lua");
 	if (r != LUA_OK) {
@@ -22,6 +25,7 @@ errno_t noop_step(PipelineContext* context) {
 	int tableLen = lua_tointeger(L, -1);
 	lua_pop(L, 1);
 
+	/*
 	PipelineStep* lua_steps = malloc(sizeof(PipelineStep) * tableLen);
 
 	LOG_INFO("TableLen: %d", tableLen);
@@ -81,6 +85,7 @@ errno_t noop_step(PipelineContext* context) {
 	}
 
 	lua_pop(L, 1);
+	*/
 
 	lua_close(L);
 

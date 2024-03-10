@@ -59,6 +59,9 @@
     <ClInclude Include="src\include\chill_thread.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\include\chill_lua_api.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\chill_cbuffer.c">
@@ -91,5 +94,6 @@
     <ClCompile Include="src\chill_thread.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\chill_lua_api.c" />
   </ItemGroup>
 </Project>
