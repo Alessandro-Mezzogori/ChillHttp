@@ -11,18 +11,25 @@
 
 #define PIPELINE_HTTPREQUEST_META "chill.http.request"
 #define HTTPREQUEST_HEADER_INDEX 1
+#define HTTPRERESPONSE_HEADER_INDEX 1
 
 #define PIPELINE_HTTPRESPONSE_META "chill.http.response"
 
 #define PIPELINE_CONTEXT_REQUEST_INDEX 1
+#define PIPELINE_CONTEXT_RESPONSE_INDEX 2
 
 typedef struct HashTableWrapper {
 	HashTable* ht;
+	bool isReadOnly;
 } HashTableWrapper;
 
 typedef struct HttpRequestWrapper {
 	HttpRequest* request;
 } HttpRequestWrapper;
+
+typedef struct HttpResponseWrapper {
+	HttpResponse* response;
+} HttpResponseWrapper;
 
 typedef struct RoutesWrapper {
 	Route* routes;
@@ -62,7 +69,7 @@ errno_t runPipeline(PipelineContextInit* init) {
 
 	for(int i = 0; i < init->routesSize; i++) {
 		Route* route = &init->routes[i];
-		RouteWrapper* routeWrapper = (RouteWrapper*) lua_newuserdata(L, sizeof(RouteWrapper));
+		RouteWrapper* routeWrapper = (RouteWrapper*) lua_newuserdatauv(L, sizeof(RouteWrapper), 0);
 		routeWrapper->route = route;
 		luaL_getmetatable(L, PIPELINE_ROUTES_ROUTE_META);
 		lua_setmetatable(L, -2);
@@ -71,31 +78,43 @@ errno_t runPipeline(PipelineContextInit* init) {
 
 	lua_setglobal(L, "routes");
 
-	ConfigWrapper* configWrapper = (ConfigWrapper*) lua_newuserdata(L, sizeof(ConfigWrapper));
+	ConfigWrapper* configWrapper = (ConfigWrapper*) lua_newuserdatauv(L, sizeof(ConfigWrapper), 0);
 	configWrapper->config = init->config;
 	luaL_getmetatable(L, PIPELINE_CONFIG_META);
 	lua_setmetatable(L, -2);
 	lua_setglobal(L, "config");
 
-	HttpRequestWrapper* requestWrapper = (HttpRequestWrapper*) lua_newuserdata(L, sizeof(HttpRequestWrapper));
+	HttpRequestWrapper* requestWrapper = (HttpRequestWrapper*) lua_newuserdatauv(L, sizeof(HttpRequestWrapper), 1);
 	requestWrapper->request = init->request;
 	luaL_getmetatable(L, PIPELINE_HTTPREQUEST_META);
 	lua_setmetatable(L, -2);
 
-	HashTableWrapper* requestHeaderWrapper = (HashTableWrapper*) lua_newuserdata(L, sizeof(HashTableWrapper));
+	HashTableWrapper* requestHeaderWrapper = (HashTableWrapper*) lua_newuserdatauv(L, sizeof(HashTableWrapper), 0);
 	requestHeaderWrapper->ht = init->request->headers;
+	requestHeaderWrapper->isReadOnly = true;
 	luaL_getmetatable(L, PIPELINE_HASHTABLE_META);
 	lua_setmetatable(L, -2);
 	lua_setiuservalue(L, -2, HTTPREQUEST_HEADER_INDEX);
 
-	stackDump(L);
-	lua_len(L, -2);
+	HttpResponseWrapper* responseWrapper = (HttpResponseWrapper*) lua_newuserdatauv(L, sizeof(HttpResponseWrapper), 1);
+	responseWrapper->response = init->response;
+	luaL_getmetatable(L, PIPELINE_HTTPRESPONSE_META);
+	lua_setmetatable(L, -2);
+
+	HashTableWrapper* responseHeaderWrapper = (HashTableWrapper*) lua_newuserdatauv(L, sizeof(HashTableWrapper), 0);
+	responseHeaderWrapper->ht = init->response->headers;
+	responseHeaderWrapper->isReadOnly = false;
+	luaL_getmetatable(L, PIPELINE_HASHTABLE_META);
+	lua_setmetatable(L, -2);
+	lua_setiuservalue(L, -2, HTTPRERESPONSE_HEADER_INDEX);
+
+	lua_len(L, -3);
 	int tableLen = lua_tointeger(L, -1);
 	LOG_TRACE("Pipeline table length: %d", tableLen);
 	lua_pop(L, 1);
 
 	size_t nbytes = sizeof(PipelineContext) + tableLen*sizeof(PipelineStep);
-	PipelineContext* a = (PipelineContext*) lua_newuserdata(L, nbytes);
+	PipelineContext* a = (PipelineContext*) lua_newuserdatauv(L, nbytes, 2);
 	a->request = init->request;
 	a->response = init->response;
 	a->connectionData = init->connectionData;
@@ -114,6 +133,9 @@ errno_t runPipeline(PipelineContextInit* init) {
 
 	luaL_getmetatable(L, PIPELINE_STEP_ARGS_META);
 	lua_setmetatable(L, -2);
+
+	lua_insert(L, -2);	// move usedata before function)
+	lua_setiuservalue(L, -2, PIPELINE_CONTEXT_RESPONSE_INDEX);
 
 	lua_insert(L, -2);	// move usedata before function)
 	lua_setiuservalue(L, -2, PIPELINE_CONTEXT_REQUEST_INDEX);
@@ -225,11 +247,29 @@ errno_t closePipeline(lua_State* L, PipelineContext* context) {
 #pragma region PipelineHashtable
 
 static const int hashtable_index(lua_State* L);
+static const int hashtable_newindex(lua_State* L);
 
-static const struct luaL_Reg hashtable_m[] = {
+static const struct luaL_Reg readonly_hashtable_m[] = {
 	{"__index", hashtable_index},
+	{"__newindex", hashtable_newindex},
 	{NULL, NULL}
 };
+
+static const int hashtable_newindex(lua_State* L) {
+	HashTableWrapper* wrapper = (HashTableWrapper*) luaL_checkudata(L, 1, PIPELINE_HASHTABLE_META);
+
+	if(wrapper->isReadOnly) {
+		luaL_error(L, "Hashtable is read only");
+		return 0;
+	}
+
+	stackDump(L);
+	const char* key = luaL_checkstring(L, -2);
+	const char* value = luaL_checkstring(L, -1);
+	hashtableAdd(wrapper->ht, key, value);
+
+	return 0;
+}
 
 static const int hashtable_index(lua_State* L) {
 	HashTableWrapper* wrapper = (HashTableWrapper*) luaL_checkudata(L, 1, PIPELINE_HASHTABLE_META);
@@ -298,6 +338,82 @@ static int request_newindex(lua_State* L) {
 	return 0;
 }
 
+#pragma endregion
+
+#pragma region PipelineHttpResponseLua
+
+static int response_index(lua_State* L);
+static int response_newindex(lua_State* L);
+
+static const struct luaL_Reg http_response_m[] = {
+	{"__index", response_index},
+	{"__newindex", response_newindex},
+	{NULL, NULL}
+};
+
+static response_newindex(lua_State* L) {
+	HttpResponseWrapper* wrapper = (HttpResponseWrapper*) luaL_checkudata(L, 1, PIPELINE_HTTPRESPONSE_META);
+	HttpResponse* response = wrapper->response;
+
+	const char* key = luaL_checkstring(L, -2);
+
+	if(strcmp(key, "version") == 0) {
+		int version = luaL_checkinteger(L, -1);
+		if(version < 1 || version > 3) {
+			luaL_error(L, "Invalid version: %d", version);
+		}
+
+		response->version = (HTTP_VERSION) version;
+	}
+	else if(strcmp(key, "statusCode") == 0) {
+		unsigned short statuscode = (unsigned short) luaL_checkinteger(L, -1);
+		if (statuscode < 100 || statuscode >= 600) {
+			luaL_error(L, "Invalid status code: %d", statuscode);
+		}
+
+		response->statusCode = statuscode;
+	}
+	else if(strcmp(key, "body") == 0) {
+		const char* body = luaL_checkstring(L, -1);
+
+		if(response->body != NULL) {
+			free(response->body);
+		}
+
+		response->body = strdup(body);
+	}
+	else if(strcmp(key, "headers") == 0) {
+		lua_getiuservalue(L, -2, HTTPRERESPONSE_HEADER_INDEX);
+	}
+
+	return 0;
+}
+
+static int response_index(lua_State* L) {
+	HttpResponseWrapper* wrapper = (HttpResponseWrapper*) luaL_checkudata(L, 1, PIPELINE_HTTPRESPONSE_META);
+	HttpResponse* response = wrapper->response;
+
+	const char* key = luaL_checkstring(L, -1);
+
+	if(strcmp(key, "version") == 0) {
+		// TODO translate version to string, expose version in http.c
+		lua_pushinteger(L, response->version);
+	}
+	else if(strcmp(key, "statusCode") == 0) {
+		lua_pushinteger(L, response->statusCode);
+	}
+	else if(strcmp(key, "body") == 0) {
+		lua_pushstring(L, response->body);
+	}
+	else if(strcmp(key, "headers") == 0) {
+		lua_getiuservalue(L, -2, HTTPRERESPONSE_HEADER_INDEX);
+	}
+	else {
+		lua_pushnil(L);
+	}
+
+	return 1;
+}
 
 #pragma endregion
 
@@ -370,6 +486,10 @@ static int args_index(lua_State* L) {
 
 	if (strcmp(key, "request") == 0) {
 		lua_getiuservalue(L, -2, PIPELINE_CONTEXT_REQUEST_INDEX);
+	}
+	else if (strcmp(key, "response") == 0) {
+		lua_getiuservalue(L, -2, PIPELINE_CONTEXT_RESPONSE_INDEX);
+		stackDump(L);
 	}
 	else {
 		lua_pushnil(L);
@@ -591,11 +711,15 @@ static int luaopen_pipeline(lua_State* L) {
 	lua_pop(L, 1);
 
 	luaL_newmetatable(L, PIPELINE_HASHTABLE_META);
-	luaL_setfuncs(L, hashtable_m, 0);
+	luaL_setfuncs(L, readonly_hashtable_m, 0);
 	lua_pop(L, 1);
 
 	luaL_newmetatable(L, PIPELINE_HTTPREQUEST_META);
 	luaL_setfuncs(L, http_request_m, 0);
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, PIPELINE_HTTPRESPONSE_META);
+	luaL_setfuncs(L, http_response_m, 0);
 	lua_pop(L, 1);
 
 	return 1;
