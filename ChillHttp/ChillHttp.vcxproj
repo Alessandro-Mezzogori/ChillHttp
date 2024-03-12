@@ -72,14 +72,14 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <CopyLocalDeploymentContent>true</CopyLocalDeploymentContent>
-    <IncludePath>D:\Projects\ChillHttp\ChillHttp\ChillHttp\src\include;D:\Projects\ChillHttp\ChillHttp\ChillHttp\lua542\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
-    <LibraryPath>D:\Projects\ChillHttp\ChillHttp\ChillHttp\lua542;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
-    <SourcePath>D:\Projects\ChillHttp\ChillHttp\ChillHttp\src;$(VC_SourcePath);</SourcePath>
+    <IncludePath>$(ProjectDir)\src\include;$(ProjectDir)\lua542\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryPath>$(ProjectDir)\lua542;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <SourcePath>$(ProjectDir)\src;$(VC_SourcePath);</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>D:\Projects\ChillHttp\ChillHttp\ChillHttp\src\include;D:\Projects\ChillHttp\ChillHttp\ChillHttp\lua542\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Projects\ChillHttp\ChillHttp\ChillHttp\lua542;$(LibraryPath)</LibraryPath>
-    <SourcePath>D:\Projects\ChillHttp\ChillHttp\ChillHttp\src;$(SourcePath)</SourcePath>
+    <IncludePath>$(ProjectDir)\src\include;$(ProjectDir)\lua542\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)\lua542;$(LibraryPath)</LibraryPath>
+    <SourcePath>$(ProjectDir)\src;$(SourcePath)</SourcePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -116,7 +116,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>D:\Projects\ChillHttp\ChillHttp\ChillHttp\src\include;D:\Projects\ChillHttp\ChillHttp\ChillHttp\lua542\include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\src\include;$(ProjectDir)\lua542\include;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -131,7 +131,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\Projects\ChillHttp\ChillHttp\ChillHttp\src\include;D:\Projects\ChillHttp\ChillHttp\ChillHttp\lua542\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\src\include;$(ProjectDir)\lua542\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
