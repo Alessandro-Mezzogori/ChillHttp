@@ -3,6 +3,17 @@
 errno_t closePipeline(lua_State* L, ContextWrapper* context);
 errno_t setupPipeline(lua_State* L, ContextWrapper* context);
 
+#pragma region lua_setup
+
+void* lua_newuserdatauv_with_meta(lua_State* L, size_t size, int nuvalue, const char* meta) {
+	void* data = lua_newuserdatauv(L, size, nuvalue);
+	luaL_getmetatable(L, meta);
+	lua_setmetatable(L, -2);
+	return data;
+}
+
+#pragma endregion
+
 errno_t runPipeline(PipelineContextInit* init) {
 	// setup context
 	// call first step
@@ -18,59 +29,55 @@ errno_t runPipeline(PipelineContextInit* init) {
 		return -1;
 	}
 
-	RoutesWrapper* wrapper = (RoutesWrapper*) lua_newuserdatauv(L, sizeof(RoutesWrapper), (int) init->routesSize);
+	// ##### Routes global setup ##### 
+	RoutesWrapper* wrapper = (RoutesWrapper*) lua_newuserdatauv_with_meta(L, sizeof(RoutesWrapper), (int) init->routesSize, PIPELINE_ROUTES_META);	
 	wrapper->routes = init->routes;
 	wrapper->size = init->routesSize;
 
-	luaL_getmetatable(L, PIPELINE_ROUTES_META);
-	lua_setmetatable(L, -2);
-
 	for(int i = 0; i < init->routesSize; i++) {
 		Route* route = &init->routes[i];
-		RouteWrapper* routeWrapper = (RouteWrapper*) lua_newuserdatauv(L, sizeof(RouteWrapper), 0);
+
+		RouteWrapper* routeWrapper = (RouteWrapper*) lua_newuserdatauv_with_meta(L, sizeof(RouteWrapper), 0, PIPELINE_ROUTES_ROUTE_META); 
 		routeWrapper->route = route;
-		luaL_getmetatable(L, PIPELINE_ROUTES_ROUTE_META);
-		lua_setmetatable(L, -2);
-		lua_setiuservalue(L, -2, i + 1);
+		lua_setiuservalue(L, -2, i + 1); 
 	}
 
-	lua_setglobal(L, "routes");
+	lua_setglobal(L, "routes"); 
+	// ##### Routes global setup ##### 
 
-	ConfigWrapper* configWrapper = (ConfigWrapper*) lua_newuserdatauv(L, sizeof(ConfigWrapper), 0);
+
+	// ##### Config global setup ##### 
+	ConfigWrapper* configWrapper = (ConfigWrapper*) lua_newuserdatauv_with_meta(L, sizeof(ConfigWrapper), 0, PIPELINE_CONFIG_META);
 	configWrapper->config = init->config;
-	luaL_getmetatable(L, PIPELINE_CONFIG_META);
-	lua_setmetatable(L, -2);
 	lua_setglobal(L, "config");
+	// ##### Config global setup ##### 
 
-	HttpRequestWrapper* requestWrapper = (HttpRequestWrapper*) lua_newuserdatauv(L, sizeof(HttpRequestWrapper), 1);
+	// ##### Context.request setup #####
+	HttpRequestWrapper* requestWrapper = (HttpRequestWrapper*) lua_newuserdatauv_with_meta(L, sizeof(HttpRequestWrapper), 1, PIPELINE_HTTPREQUEST_META);
 	requestWrapper->request = init->request;
-	luaL_getmetatable(L, PIPELINE_HTTPREQUEST_META);
-	lua_setmetatable(L, -2);
 
-	HashTableWrapper* requestHeaderWrapper = (HashTableWrapper*) lua_newuserdatauv(L, sizeof(HashTableWrapper), 0);
+	HashTableWrapper* requestHeaderWrapper = (HashTableWrapper*) lua_newuserdatauv_with_meta(L, sizeof(HashTableWrapper), 0, PIPELINE_HASHTABLE_META);
 	requestHeaderWrapper->ht = init->request->headers;
 	requestHeaderWrapper->isReadOnly = true;
-	luaL_getmetatable(L, PIPELINE_HASHTABLE_META);
-	lua_setmetatable(L, -2);
 	lua_setiuservalue(L, -2, HTTPREQUEST_HEADER_INDEX);
+	// ##### Context.request setup #####
 
-	HttpResponseWrapper* responseWrapper = (HttpResponseWrapper*) lua_newuserdatauv(L, sizeof(HttpResponseWrapper), 1);
+	// ##### Context.response setup #####
+	HttpResponseWrapper* responseWrapper = (HttpResponseWrapper*) lua_newuserdatauv_with_meta(L, sizeof(HttpResponseWrapper), 1, PIPELINE_HTTPRESPONSE_META);
 	responseWrapper->response = init->response;
-	luaL_getmetatable(L, PIPELINE_HTTPRESPONSE_META);
-	lua_setmetatable(L, -2);
 
-	HashTableWrapper* responseHeaderWrapper = (HashTableWrapper*) lua_newuserdatauv(L, sizeof(HashTableWrapper), 0);
+	HashTableWrapper* responseHeaderWrapper = (HashTableWrapper*) lua_newuserdatauv(L, sizeof(HashTableWrapper), 0, PIPELINE_HASHTABLE_META);
 	responseHeaderWrapper->ht = init->response->headers;
 	responseHeaderWrapper->isReadOnly = false;
-	luaL_getmetatable(L, PIPELINE_HASHTABLE_META);
-	lua_setmetatable(L, -2);
 	lua_setiuservalue(L, -2, HTTPRERESPONSE_HEADER_INDEX);
+	// ##### Context.response setup #####
 
-	ConnectionDataWrapper* connectionWrapper = (ConnectionDataWrapper*) lua_newuserdatauv(L, sizeof(HttpResponseWrapper), 0);
+	// ##### Context.connection setup #####
+	ConnectionDataWrapper* connectionWrapper = (ConnectionDataWrapper*) lua_newuserdatauv_with_meta(L, sizeof(HttpResponseWrapper), 0, PIPELINE_CONNECTIONDATA_META);
 	connectionWrapper->connectionData = init->connectionData;
-	luaL_getmetatable(L, PIPELINE_CONNECTIONDATA_META);
-	lua_setmetatable(L, -2);
+	// ##### Context.connection setup #####
 
+	// ##### Context and steps setup #####
 	lua_len(L, -4);
 	int tableLen = (int) lua_tointeger(L, -1);
 	LOG_TRACE("Pipeline table length: %d", tableLen);
@@ -78,7 +85,7 @@ errno_t runPipeline(PipelineContextInit* init) {
 
 
 	size_t nbytes = sizeof(ContextWrapper) + tableLen*sizeof(PipelineLuaStep);
-	ContextWrapper* a = (ContextWrapper*) lua_newuserdatauv(L, nbytes, 3);
+	ContextWrapper* a = (ContextWrapper*) lua_newuserdatauv_with_meta(L, nbytes, 3, PIPELINE_STEP_ARGS_META);
 	a->request = init->request;
 	a->response = init->response;
 	a->connectionData = init->connectionData;
@@ -95,9 +102,6 @@ errno_t runPipeline(PipelineContextInit* init) {
 		step->id[0] = 0;
 	}
 
-	luaL_getmetatable(L, PIPELINE_STEP_ARGS_META);
-	lua_setmetatable(L, -2);
-
 	lua_insert(L, -2);	// move usedata before function)
 	lua_setiuservalue(L, -2, PIPELINE_CONTEXT_CONNECTION_INDEX);
 
@@ -110,6 +114,7 @@ errno_t runPipeline(PipelineContextInit* init) {
 	lua_insert(L, -2);	// move usedata before function)
 	setupPipeline(L, a);
 	lua_insert(L, -2);	// move usedata before function)
+	// ##### Context and steps setup #####
 
 	if(a->stepsSize == 0) {
 		LOG_ERROR("No steps in pipeline");
