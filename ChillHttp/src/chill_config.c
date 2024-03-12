@@ -9,7 +9,11 @@ void parse_lua_conf(lua_State* L, void* data) {
 		getfield(L, "PORT", LUA_TYPE_STRING, conf->port);
 		getfield(L, "MAX_CONCURRENT_THREADS", LUA_TYPE_SIZE_T, &conf->maxConcurrentThreads);
 		getfield(L, "SERVING_FOLDER", LUA_TYPE_STRING, conf->servingFolder);
-		getfield(L, "RECV_TIMEOUT", LUA_TYPE_INT, &conf->recvTimeout);
+
+		size_t timeout;
+		getfield(L, "RECV_TIMEOUT", LUA_TYPE_SIZE_T, &timeout);
+		conf->recvTimeout = timeout * 1000;
+
 		conf->servingFolderLen = strlen(conf->servingFolder);
 	}
 	else {

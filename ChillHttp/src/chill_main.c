@@ -168,7 +168,7 @@ int main() {
 			break;
 		}
 
-		int setsockoptRes = setsockopt(clientSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&config.recvTimeout, sizeof(int));
+		int setsockoptRes = setsockopt(clientSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&config.recvTimeout, sizeof(config.recvTimeout));
 		if(setsockoptRes == SOCKET_ERROR) {
 			LOG_ERROR("setsockopt failed: %d", WSAGetLastError());
 			closesocket(clientSocket);

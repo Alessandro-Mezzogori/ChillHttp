@@ -14,9 +14,11 @@
 #define HTTPRERESPONSE_HEADER_INDEX 1
 
 #define PIPELINE_HTTPRESPONSE_META "chill.http.response"
+#define PIPELINE_CONNECTIONDATA_META "chill.connection"
 
 #define PIPELINE_CONTEXT_REQUEST_INDEX 1
 #define PIPELINE_CONTEXT_RESPONSE_INDEX 2
+#define PIPELINE_CONTEXT_CONNECTION_INDEX 3
 
 typedef struct HashTableWrapper {
 	HashTable* ht;
@@ -43,6 +45,10 @@ typedef struct RouteWrapper {
 typedef struct ConfigWrapper {
 	Config* config;
 } ConfigWrapper;
+
+typedef struct ConnectionDataWrapper {
+	ConnectionData* connectionData;
+} ConnectionDataWrapper;
 
 errno_t runPipeline(PipelineContextInit* init) {
 	// setup context
@@ -108,13 +114,18 @@ errno_t runPipeline(PipelineContextInit* init) {
 	lua_setmetatable(L, -2);
 	lua_setiuservalue(L, -2, HTTPRERESPONSE_HEADER_INDEX);
 
-	lua_len(L, -3);
+	ConnectionDataWrapper* connectionWrapper = (ConnectionDataWrapper*) lua_newuserdatauv(L, sizeof(HttpResponseWrapper), 0);
+	connectionWrapper->connectionData = init->connectionData;
+	luaL_getmetatable(L, PIPELINE_CONNECTIONDATA_META);
+	lua_setmetatable(L, -2);
+
+	lua_len(L, -4);
 	int tableLen = lua_tointeger(L, -1);
 	LOG_TRACE("Pipeline table length: %d", tableLen);
 	lua_pop(L, 1);
 
 	size_t nbytes = sizeof(PipelineContext) + tableLen*sizeof(PipelineStep);
-	PipelineContext* a = (PipelineContext*) lua_newuserdatauv(L, nbytes, 2);
+	PipelineContext* a = (PipelineContext*) lua_newuserdatauv(L, nbytes, 3);
 	a->request = init->request;
 	a->response = init->response;
 	a->connectionData = init->connectionData;
@@ -133,6 +144,9 @@ errno_t runPipeline(PipelineContextInit* init) {
 
 	luaL_getmetatable(L, PIPELINE_STEP_ARGS_META);
 	lua_setmetatable(L, -2);
+
+	lua_insert(L, -2);	// move usedata before function)
+	lua_setiuservalue(L, -2, PIPELINE_CONTEXT_CONNECTION_INDEX);
 
 	lua_insert(L, -2);	// move usedata before function)
 	lua_setiuservalue(L, -2, PIPELINE_CONTEXT_RESPONSE_INDEX);
@@ -417,6 +431,59 @@ static int response_index(lua_State* L) {
 
 #pragma endregion
 
+#pragma region PipelineConnectionDataLua
+
+static int connection_index(lua_State* L);
+static int connection_newindex(lua_State* L);
+static int connection_close(lua_State* L);
+
+static const struct luaL_Reg connection_m[] = {
+	{"__index",		connection_index},
+	{"__newindex",	connection_newindex},
+	{"close",		connection_close},
+	{NULL, NULL}
+};
+
+static connection_newindex(lua_State* L) {
+	luaL_error(L, "Connection table is read only");
+	return 0;
+}
+
+static int connection_index(lua_State* L) {
+	ConnectionDataWrapper* wrapper = (ConnectionDataWrapper*) luaL_checkudata(L, 1, PIPELINE_CONNECTIONDATA_META);
+	ConnectionData* connection = wrapper->connectionData;
+
+	const char* key = luaL_checkstring(L, -1);
+
+	size_t connection_m_size = sizeof(connection_m) / sizeof(struct luaL_Reg);
+	for(int i = 0; i < connection_m_size; i++) {
+		if(connection_m[i].name != NULL && strcmp(connection_m[i].name, key) == 0) {
+			lua_pushcfunction(L, connection_m[i].func);
+			return 1;
+		}
+	}
+
+	if(strcmp(key, "status") == 0) {
+		// TODO translate version to string, expose version in http.c
+		lua_pushinteger(L, connection->connectionStatus);
+	}
+	else {
+		lua_pushnil(L);
+	}
+
+	return 1;
+}
+
+static int connection_close(lua_State* L) {
+	ConnectionDataWrapper* wrapper = (ConnectionDataWrapper*) luaL_checkudata(L, 1, PIPELINE_CONNECTIONDATA_META);
+	ConnectionData* connection = wrapper->connectionData;
+
+	connection->connectionStatus = CONNECTION_STATUS_CLOSING;
+	return 0;
+}
+
+#pragma endregion
+
 #pragma region LuaConfig
 
 static int config_index(lua_State* L);
@@ -489,7 +556,9 @@ static int args_index(lua_State* L) {
 	}
 	else if (strcmp(key, "response") == 0) {
 		lua_getiuservalue(L, -2, PIPELINE_CONTEXT_RESPONSE_INDEX);
-		stackDump(L);
+	}
+	else if (strcmp(key, "connection") == 0) {
+		lua_getiuservalue(L, -2, PIPELINE_CONTEXT_CONNECTION_INDEX);
 	}
 	else {
 		lua_pushnil(L);
@@ -720,6 +789,10 @@ static int luaopen_pipeline(lua_State* L) {
 
 	luaL_newmetatable(L, PIPELINE_HTTPRESPONSE_META);
 	luaL_setfuncs(L, http_response_m, 0);
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, PIPELINE_CONNECTIONDATA_META);
+	luaL_setfuncs(L, connection_m, 0);
 	lua_pop(L, 1);
 
 	return 1;
