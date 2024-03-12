@@ -119,7 +119,12 @@ errno_t setHttpResponseBody(HttpResponse* response, const char* body) {
 	}
 
 	response->body = malloc((response->bodySize + 1) * sizeof(char));
-	memccpy(response->body, body, (int) response->bodySize, sizeof(char));
+	if(response->body == NULL) {
+		LOG_ERROR("Failed to allocate memory for response body");
+		return ENOMEM;
+	}
+
+	memcpy(response->body, body, (response->bodySize + 1)*sizeof(char));
 
 	return 0;
 }

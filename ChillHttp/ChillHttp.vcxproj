@@ -158,6 +158,7 @@
     <ClInclude Include="src\include\chill_log.h" />
     <ClInclude Include="src\include\chill_lua_boolean_array.h" />
     <ClInclude Include="src\include\chill_pipeline.h" />
+    <ClInclude Include="src\include\chill_pipeline_lualibs.h" />
     <ClInclude Include="src\include\chill_router.h" />
     <ClInclude Include="src\include\chill_socket.h" />
     <ClInclude Include="src\include\chill_string.h" />
@@ -173,6 +174,7 @@
     <ClCompile Include="src\chill_lua_api.c" />
     <ClCompile Include="src\chill_main.c" />
     <ClCompile Include="src\chill_pipeline.c" />
+    <ClCompile Include="src\chill_pipeline_lualibs.c" />
     <ClCompile Include="src\chill_router.c" />
     <ClCompile Include="src\chill_string.c" />
     <ClCompile Include="src\chill_thread.c" />
