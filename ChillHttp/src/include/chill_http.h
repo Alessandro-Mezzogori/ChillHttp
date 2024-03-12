@@ -41,13 +41,16 @@ typedef struct HttpResponse {
 	unsigned short statusCode;
 	HashTable* headers;
 	char* body;
+	size_t bodySize;
 } HttpResponse;
 
 errno_t recvRequest(SOCKET socket, HttpRequest* req);
 void freeHttpRequest(HttpRequest* request);
 
 errno_t createHttpResponse(HttpResponse* response);
-errno_t setHttpResponse(HttpResponse* response, HTTP_VERSION version, short statusCode, char* body);
+errno_t setHttpResponse(HttpResponse* response, HTTP_VERSION version, short statusCode, const char* body);
 errno_t buildHttpResponse(HttpResponse* response, char** buffer, size_t* bufferSize);
 void freeHttpResponse(HttpResponse* response);
+
+errno_t setHttpResponseBody(HttpResponse* response, const char* body);
 

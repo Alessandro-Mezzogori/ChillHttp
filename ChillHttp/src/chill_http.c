@@ -81,6 +81,7 @@ errno_t createHttpResponse(HttpResponse* response) {
 	response->version = HTTP_UNKNOWN_VERSION;
 	response->statusCode = 0;
 	response->body = NULL;
+	response->bodySize = 0;
 	response->headers = hashtableCreate();
 
 	if(response->headers == NULL) {
@@ -90,7 +91,7 @@ errno_t createHttpResponse(HttpResponse* response) {
 	return 0;
 }
 
-errno_t setHttpResponse(HttpResponse* response, HTTP_VERSION version, short statusCode, char* body) {
+errno_t setHttpResponse(HttpResponse* response, HTTP_VERSION version, short statusCode, const char* body) {
 	if(response == NULL) {
 		LOG_ERROR("Response or headers are NULL");
 		return 1;
@@ -98,7 +99,27 @@ errno_t setHttpResponse(HttpResponse* response, HTTP_VERSION version, short stat
 
 	response->version = version;
 	response->statusCode = statusCode;
-	response->body = body;
+	setHttpResponseBody(response, body);
+
+	return 0;
+}
+
+errno_t setHttpResponseBody(HttpResponse* response, const char* body) {
+	if(response == NULL) {
+		LOG_ERROR("Response or headers are NULL");
+		return 1;
+	}
+
+	response->bodySize = body != NULL ? strlen(body) : 0;
+
+	free(response->body);
+	if(body == NULL) {
+		response->body = NULL;
+		return 0;
+	}
+
+	response->body = malloc((response->bodySize + 1) * sizeof(char));
+	memccpy(response->body, body, (int) response->bodySize, sizeof(char));
 
 	return 0;
 }

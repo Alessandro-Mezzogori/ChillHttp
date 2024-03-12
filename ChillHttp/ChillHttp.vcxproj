@@ -160,6 +160,7 @@
     <ClInclude Include="src\include\chill_pipeline.h" />
     <ClInclude Include="src\include\chill_router.h" />
     <ClInclude Include="src\include\chill_socket.h" />
+    <ClInclude Include="src\include\chill_string.h" />
     <ClInclude Include="src\include\chill_thread.h" />
   </ItemGroup>
   <ItemGroup>
@@ -173,6 +174,7 @@
     <ClCompile Include="src\chill_main.c" />
     <ClCompile Include="src\chill_pipeline.c" />
     <ClCompile Include="src\chill_router.c" />
+    <ClCompile Include="src\chill_string.c" />
     <ClCompile Include="src\chill_thread.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

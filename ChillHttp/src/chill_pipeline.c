@@ -50,6 +50,10 @@ typedef struct ConnectionDataWrapper {
 	ConnectionData* connectionData;
 } ConnectionDataWrapper;
 
+static int luaopen_pipeline(lua_State* L);
+errno_t closePipeline(lua_State* L, PipelineContext* context);
+errno_t setupPipeline(lua_State* L, PipelineContext* context);
+
 errno_t runPipeline(PipelineContextInit* init) {
 	// setup context
 	// call first step
@@ -66,7 +70,7 @@ errno_t runPipeline(PipelineContextInit* init) {
 		return -1;
 	}
 
-	RoutesWrapper* wrapper = (RoutesWrapper*) lua_newuserdatauv(L, sizeof(RoutesWrapper), init->routesSize);
+	RoutesWrapper* wrapper = (RoutesWrapper*) lua_newuserdatauv(L, sizeof(RoutesWrapper), (int) init->routesSize);
 	wrapper->routes = init->routes;
 	wrapper->size = init->routesSize;
 
@@ -120,7 +124,7 @@ errno_t runPipeline(PipelineContextInit* init) {
 	lua_setmetatable(L, -2);
 
 	lua_len(L, -4);
-	int tableLen = lua_tointeger(L, -1);
+	int tableLen = (int) lua_tointeger(L, -1);
 	LOG_TRACE("Pipeline table length: %d", tableLen);
 	lua_pop(L, 1);
 
@@ -260,8 +264,8 @@ errno_t closePipeline(lua_State* L, PipelineContext* context) {
 
 #pragma region PipelineHashtable
 
-static const int hashtable_index(lua_State* L);
-static const int hashtable_newindex(lua_State* L);
+static int hashtable_index(lua_State* L);
+static int hashtable_newindex(lua_State* L);
 
 static const struct luaL_Reg readonly_hashtable_m[] = {
 	{"__index", hashtable_index},
@@ -269,7 +273,7 @@ static const struct luaL_Reg readonly_hashtable_m[] = {
 	{NULL, NULL}
 };
 
-static const int hashtable_newindex(lua_State* L) {
+static int hashtable_newindex(lua_State* L) {
 	HashTableWrapper* wrapper = (HashTableWrapper*) luaL_checkudata(L, 1, PIPELINE_HASHTABLE_META);
 
 	if(wrapper->isReadOnly) {
@@ -285,7 +289,7 @@ static const int hashtable_newindex(lua_State* L) {
 	return 0;
 }
 
-static const int hashtable_index(lua_State* L) {
+static int hashtable_index(lua_State* L) {
 	HashTableWrapper* wrapper = (HashTableWrapper*) luaL_checkudata(L, 1, PIPELINE_HASHTABLE_META);
 	const char* key = luaL_checkstring(L, -1);
 
@@ -372,7 +376,7 @@ static response_newindex(lua_State* L) {
 	const char* key = luaL_checkstring(L, -2);
 
 	if(strcmp(key, "version") == 0) {
-		int version = luaL_checkinteger(L, -1);
+		int version = (int) luaL_checkinteger(L, -1);
 		if(version < 1 || version > 3) {
 			luaL_error(L, "Invalid version: %d", version);
 		}
@@ -394,7 +398,7 @@ static response_newindex(lua_State* L) {
 			free(response->body);
 		}
 
-		response->body = strdup(body);
+		setHttpResponseBody(response, body);
 	}
 	else if(strcmp(key, "headers") == 0) {
 		lua_getiuservalue(L, -2, HTTPRERESPONSE_HEADER_INDEX);
@@ -683,14 +687,14 @@ static const struct luaL_Reg logger_f[] = {
 
 #pragma region LuaRoutes
 
-static const int route_index(lua_State* L);
+static int route_index(lua_State* L);
 
 static const struct luaL_Reg route_m[] = {
 	{"__index", route_index},
 	{NULL, NULL}
 };
 
-static const int route_index(lua_State* L) {
+static int route_index(lua_State* L) {
 	RouteWrapper* wrapper = (RouteWrapper*) luaL_checkudata(L, 1, PIPELINE_ROUTES_ROUTE_META);
 	const char* key = luaL_checkstring(L, -1);
 
@@ -708,9 +712,9 @@ static const int route_index(lua_State* L) {
 	return 1;
 }
 
-static const int routes_size(lua_State* L);
-static const int routes_index(lua_State* L);
-static const int routes_newindex(lua_State* L);
+static int routes_size(lua_State* L);
+static int routes_index(lua_State* L);
+static int routes_newindex(lua_State* L);
 
 static const struct luaL_Reg routes_f[] = {
 	{"__len", routes_size},
@@ -719,12 +723,12 @@ static const struct luaL_Reg routes_f[] = {
 	{NULL, NULL}
 };
 
-static const int routes_newindex(lua_State* L) {
+static int routes_newindex(lua_State* L) {
 	luaL_error(L, "Route table is read only");
 	return 0;
 }
 
-static const int routes_index(lua_State* L) {
+static int routes_index(lua_State* L) {
 	RoutesWrapper* wrapper = (RoutesWrapper*) luaL_checkudata(L, 1, PIPELINE_ROUTES_META);
 
 	int indexType = lua_type(L, -1);
@@ -739,8 +743,11 @@ static const int routes_index(lua_State* L) {
 		}
 	}
 	else if (indexType == LUA_TNUMBER) {
-		const int index = luaL_checkinteger(L, -1);
-		luaL_argcheck(L, 0 < index && index <= wrapper->size, 2, "index out of range");
+		int index = (int) luaL_checkinteger(L, -1);
+		luaL_argcheck(L, 0 < index, 2, "index out of range");
+
+		// TODO find way to do a better check without casting 
+		luaL_argcheck(L, 0 < (size_t) index && index <= wrapper->size, 2, "index out of range"); 
 
 		lua_getiuservalue(L, -2, index);
 	}
@@ -748,7 +755,7 @@ static const int routes_index(lua_State* L) {
 	return 1;
 }
 
-static const int routes_size(lua_State* L) {
+static int routes_size(lua_State* L) {
 	RoutesWrapper* wrapper = (RoutesWrapper*) luaL_checkudata(L, 1, PIPELINE_ROUTES_META);
 	lua_pushinteger(L, wrapper->size);
 	return 1;

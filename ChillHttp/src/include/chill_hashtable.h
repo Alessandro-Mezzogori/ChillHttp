@@ -21,11 +21,11 @@ typedef struct HashTable {
 
 #define HASHSIZE 101	
 
-unsigned hashtableHash(char *s);
-HashEntry* hashtableLookup(HashTable* hashtable, char* s);
-HashEntry* hashtableAdd(HashTable* hashtable, char* name, char* value);
+unsigned hashtableHash(const char *s);
+HashEntry* hashtableLookup(HashTable* hashtable, const char* s);
+HashEntry* hashtableAdd(HashTable* hashtable, const char* name, const char* value);
 HashTable* hashtableCreate();
-int hashtableRemove(HashTable* hashtable, char* name);
+int hashtableRemove(HashTable* hashtable, const char* name);
 void hashtableFree(HashTable* hashtable);
 void hashentryFullFree(HashEntry* hashtable);
 void hashentryFree(HashEntry* hashtable);

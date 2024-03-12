@@ -19,12 +19,10 @@ void parse_lua_conf(lua_State* L, void* data) {
 	else {
 		LOG_ERROR("conf is not a table");
 	}
-	
-	return 0;
 }
 
 errno_t loadConfig(Config* config) {
-	launch_lua_script_standalone(CONFIG_PATH_LUA, parse_lua_conf, config);
+	return launch_lua_script_standalone(CONFIG_PATH_LUA, parse_lua_conf, config);
 }
 
 /*

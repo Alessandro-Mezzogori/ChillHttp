@@ -8,7 +8,7 @@ unsigned hashtableHash(char* s) {
 	return hashval % HASHSIZE;
 }
 
-HashEntry* hashtableLookup(HashTable* hashtable, char* s) {
+HashEntry* hashtableLookup(HashTable* hashtable, const char* s) {
 	if(hashtable == NULL) {
 		return NULL;
 	}
@@ -26,7 +26,7 @@ HashEntry* hashtableLookup(HashTable* hashtable, char* s) {
 	return NULL;
 }
 
-HashEntry* createHashEntry(char* name, char* value) {
+HashEntry* createHashEntry(const char* name, const char* value) {
 	HashEntry* entry = (HashEntry*)malloc(sizeof(HashEntry));
 	if (entry == NULL) {
 		goto _failure;
@@ -53,7 +53,7 @@ _failure:
 	return NULL;
 }
 
-HashEntry* hashtableAdd(HashTable* hashtable, char* name, char* value) {
+HashEntry* hashtableAdd(HashTable* hashtable, const char* name, const char* value) {
 	if(hashtable == NULL) {
 		return NULL;
 	}
@@ -94,7 +94,7 @@ HashEntry* hashtableAdd(HashTable* hashtable, char* name, char* value) {
 	return NULL;
 }
 
-int hashtableRemove(HashTable* hashtable, char* name) {
+int hashtableRemove(HashTable* hashtable, const char* name) {
 	if (hashtable == NULL) {
 		return -1;
 	}

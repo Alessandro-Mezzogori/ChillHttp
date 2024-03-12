@@ -35,18 +35,19 @@ errno_t CheckLua(lua_State* L, int r) {
 	return 0;
 }
 
-void launch_lua_script_standalone(const char* script, lua_callback callback, void* data) {
+errno_t launch_lua_script_standalone(const char* script, lua_callback callback, void* data) {
 	lua_State* L = luaL_newstate();
 	luaL_openlibs(L);
 
 	int r = luaL_dofile(L, script);
 	if (r != LUA_OK) {
 		LOG_ERROR("Error: %s", lua_tostring(L, -1));
+		return r;
 	}
 
 	callback(L, data);
-
 	lua_close(L);
+	return 0;
 }
 
 errno_t getfield(lua_State* L, const char* key, LuaType type, void* dest) {
@@ -59,7 +60,7 @@ errno_t getfield(lua_State* L, const char* key, LuaType type, void* dest) {
 			*(size_t*)dest = lua_tointeger(L, -1);
 			break;
 		case LUA_TYPE_INT: 
-			*(int*)dest = lua_tointeger(L, -1);
+			*(int*)dest = (int) lua_tointeger(L, -1);
 			break;
 		case LUA_TYPE_NUMBER:
 			*(double*)dest = lua_tonumber(L, -1);

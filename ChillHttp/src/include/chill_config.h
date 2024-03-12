@@ -26,7 +26,7 @@ typedef struct {
 	// ##### LOGGING #####
 
 	// ##### THREADS #####
-	size_t maxConcurrentThreads;
+	int maxConcurrentThreads;
 
 	// ##### PIPELINE #####
 

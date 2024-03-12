@@ -8,7 +8,6 @@
 #define checkarray(L) (BitArray*)luaL_checkudata(L, 1, META_NAME)
 
 static int newarray(lua_State* L) {
-	int i;
 	size_t nbytes;
 	BitArray *a;
 
@@ -18,7 +17,7 @@ static int newarray(lua_State* L) {
 	a = (BitArray*) lua_newuserdata(L, nbytes);
 
 	a->size = n;
-	for(i = 0; i <= I_WORD(n - 1); i++) 
+	for(unsigned i = 0; i <= I_WORD(n - 1); i++) 
 		a->values[i] = 0;  /* initialize array */
 
 	luaL_getmetatable(L, META_NAME);
