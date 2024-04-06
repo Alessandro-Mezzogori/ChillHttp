@@ -66,7 +66,7 @@ errno_t runPipeline(PipelineContextInit* init) {
 	HttpResponseWrapper* responseWrapper = (HttpResponseWrapper*) lua_newuserdatauv_with_meta(L, sizeof(HttpResponseWrapper), 1, PIPELINE_HTTPRESPONSE_META);
 	responseWrapper->response = init->response;
 
-	HashTableWrapper* responseHeaderWrapper = (HashTableWrapper*) lua_newuserdatauv(L, sizeof(HashTableWrapper), 0, PIPELINE_HASHTABLE_META);
+	HashTableWrapper* responseHeaderWrapper = (HashTableWrapper*) lua_newuserdatauv_with_meta(L, sizeof(HashTableWrapper), 0, PIPELINE_HASHTABLE_META);
 	responseHeaderWrapper->ht = init->response->headers;
 	responseHeaderWrapper->isReadOnly = false;
 	lua_setiuservalue(L, -2, HTTPRERESPONSE_HEADER_INDEX);
