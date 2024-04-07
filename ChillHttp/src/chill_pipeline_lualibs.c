@@ -122,7 +122,7 @@ static response_newindex(lua_State* L) {
 
 		response->version = (HTTP_VERSION) version;
 	}
-	else if(strcmp(key, "statusCode") == 0) {
+	else if(strcmp(key, "status") == 0) {
 		unsigned short statuscode = (unsigned short) luaL_checkinteger(L, -1);
 		if (statuscode < 100 || statuscode >= 600) {
 			luaL_error(L, "Invalid status code: %d", statuscode);
