@@ -96,7 +96,7 @@ DWORD threadFunction(void* lpParam) {
 		free(responseBuffer);
 		freeHttpRequest(&request);
 		freeHttpResponse(&response);
-	} while (pdata->connectionData.connectionStatus = CONNECTION_STATUS_CONNECTED);
+	} while (pdata->connectionData.connectionStatus == CONNECTION_STATUS_CONNECTED);
 
 	if (shutdown(socket, SD_SEND) == SOCKET_ERROR) {
 		LOG_FATAL("Socket {%d} Shutdown failed: %d", socket, WSAGetLastError());
