@@ -6,12 +6,12 @@ void parse_lua_conf(lua_State* L, void* data) {
 	Config* conf = (Config*) data;
 
 	if(lua_istable(L, -1)){
-		getfield(L, "PORT", LUA_TYPE_STRING, conf->port);
-		getfield(L, "MAX_CONCURRENT_THREADS", LUA_TYPE_SIZE_T, &conf->maxConcurrentThreads);
-		getfield(L, "SERVING_FOLDER", LUA_TYPE_STRING, conf->servingFolder);
+		getfield(L, "PORT", LUA_TYPE_STRING, conf->port, 6);
+		getfield(L, "MAX_CONCURRENT_THREADS", LUA_TYPE_SIZE_T, &conf->maxConcurrentThreads, 0);
+		getfield(L, "SERVING_FOLDER", LUA_TYPE_STRING, conf->servingFolder, 256);
 
 		size_t timeout;
-		getfield(L, "RECV_TIMEOUT", LUA_TYPE_SIZE_T, &timeout);
+		getfield(L, "RECV_TIMEOUT", LUA_TYPE_SIZE_T, &timeout, 0);
 		conf->recvTimeout = timeout * 1000;
 
 		conf->servingFolderLen = strlen(conf->servingFolder);

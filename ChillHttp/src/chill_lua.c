@@ -50,7 +50,7 @@ errno_t launch_lua_script_standalone(const char* script, lua_callback callback, 
 	return 0;
 }
 
-errno_t getfield(lua_State* L, const char* key, LuaType type, void* dest) {
+errno_t getfield(lua_State* L, const char* key, LuaType type, void* dest, size_t maxSize) {
 	lua_pushstring(L, key);
 	lua_gettable(L, -2); // TODO make it configurable
 
@@ -66,7 +66,7 @@ errno_t getfield(lua_State* L, const char* key, LuaType type, void* dest) {
 			*(double*)dest = lua_tonumber(L, -1);
 			break;
 		case LUA_TYPE_STRING:
-			strcpy((char*)dest, lua_tostring(L, -1));
+			strcpy_s((char*)dest, maxSize, lua_tostring(L, -1));
 			break;
 		default:
 			break;

@@ -150,7 +150,7 @@ errno_t getStep(lua_State* L, PipelineLuaStep* step) {
 		luaL_error(L, "Step id too long (max 255): %s", id);
 		return -1;
 	}
-	strcpy(step->id, id);
+	strcpy_s(step->id, 255, id);
 	lua_pop(L, 1);
 
 	fieldType = lua_getfield(L, -1, "handler");

@@ -23,5 +23,5 @@ typedef enum {
 
 void stackDump(lua_State* L);
 errno_t launch_lua_script_standalone(const char* script, lua_callback callback, void* data);
-errno_t getfield(lua_State* L, const char* key, LuaType type, void* dest);
+errno_t getfield(lua_State* L, const char* key, LuaType type, void* dest, size_t maxSize);
 
