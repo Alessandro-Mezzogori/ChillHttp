@@ -93,6 +93,7 @@ int main() {
 		return WinsockInitializedError;
 	}
 
+	LOG_INFO("Initialiasing port");
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
@@ -107,6 +108,7 @@ int main() {
 		return 1;
 	}
 
+	LOG_INFO("Main thread data setup...");
 	PMTData mtData = malloc(sizeof(MTData));
 	if(mtData == NULL) {
 		LOG_FATAL("Malloc failed");
@@ -125,6 +127,7 @@ int main() {
 		return 1;
 	}
 
+	LOG_INFO("Server socket creation...");
 	mtData->serverSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
 	SOCKET serverSocket = mtData->serverSocket;
 	if (serverSocket == INVALID_SOCKET) {
@@ -135,6 +138,7 @@ int main() {
 	}
 	LOG_INFO("Server socket created");
 
+	LOG_INFO("Server socket binding");
 	if(bind(serverSocket, result->ai_addr, (int)result->ai_addrlen) == SOCKET_ERROR) {
 		LOG_FATAL("Bind failed with error: %d", WSAGetLastError());
 		freeMainThreadData(mtData);
@@ -142,8 +146,10 @@ int main() {
 		return SocketCreationError;
 	}
 
+	LOG_DEBUG("[free] main address");
 	freeaddrinfo(result);
 
+	LOG_INFO("Server socket listening");
 	if (listen(serverSocket, config.maxConcurrentThreads) == SOCKET_ERROR) {
 		LOG_FATAL("Listened failed: %d", WSAGetLastError());
 		freeMainThreadData(mtData);
@@ -151,6 +157,7 @@ int main() {
 		return ListenError;
 	}
 
+	LOG_INFO("Cleanup thread instantiation");
 	HANDLE cleanupThread = CreateThread(NULL, 0, cleanupThreadFunction, mtData, 0, NULL);
 	if(cleanupThread == NULL) {
 		LOG_FATAL("CreateThread failed: %d", WSAGetLastError());
@@ -159,6 +166,7 @@ int main() {
 		return 1;
 	}
 
+	LOG_INFO("Setup successfull, ready to accept connections");
 	PCTD childs = mtData->childs;
 	while (TRUE) {
 		SOCKET clientSocket = accept(serverSocket, NULL, NULL);
@@ -167,7 +175,9 @@ int main() {
 			LOG_FATAL("Accept failed: %d", WSAGetLastError());
 			break;
 		}
+		LOG_INFO("Accept successfull socket %d", clientSocket);
 
+		LOG_DEBUG("Setup socket %d options", clientSocket);
 		int setsockoptRes = setsockopt(clientSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&config.recvTimeout, sizeof(config.recvTimeout));
 		if(setsockoptRes == SOCKET_ERROR) {
 			LOG_ERROR("setsockopt failed: %d", WSAGetLastError());
@@ -176,6 +186,7 @@ int main() {
 		}
 
 		// find first free thread
+		LOG_INFO("Finding free thread");
 		int availableThreadIndex = -1;
 		for(int i = 0; i < config.maxConcurrentThreads; i++) {
 			PCTD child = &childs[i];
@@ -219,8 +230,7 @@ int main() {
 		}
 	}
 
-	LOG_FLUSH();
-
+	LOG_INFO("Cleaning up");
 	for(int i = 0; i < config.maxConcurrentThreads; i++) {
 		HANDLE hThread = childs[i].hThread;
 		if (hThread != NULL) {
@@ -238,5 +248,7 @@ int main() {
 
 	freeMainThreadData(mtData);
 
+	LOG_INFO("Shutting down...");
+	LOG_FLUSH();
 	return 0;
 }

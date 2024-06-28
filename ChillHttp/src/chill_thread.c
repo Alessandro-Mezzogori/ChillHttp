@@ -28,6 +28,13 @@ DWORD threadFunction(void* lpParam) {
 
 	LOG_INFO("Thread {%d} socket: {%d} initiliazed", threadId, socket);
 
+	LOG_DEBUG("Registering routes...");
+	size_t routeSize = 3;
+	Route routes[3];
+	registerRoute(routes, "/test", HTTP_POST, test_route);
+	registerRoute(routes + 1, "/test2", HTTP_POST, test_route2);
+	registerRoute(routes + 2, "*", HTTP_GET, serve_file);
+
 	do {
 		HttpRequest request;
 		errno_t err = recvRequest(socket, &request);
@@ -35,8 +42,8 @@ DWORD threadFunction(void* lpParam) {
 			LOG_ERROR("Error while receiving request: %d", err);
 			break;
 		}
+		LOG_DEBUG("Request rcved: %s", request.path);
 			
-		// read path
 		HttpResponse response;
 		errno_t responseCreateErr = createHttpResponse(&response);
 		if(responseCreateErr != 0){
@@ -46,13 +53,7 @@ DWORD threadFunction(void* lpParam) {
 			return 1;
 		}
 
-		size_t routeSize = 3;
-		Route routes[3];
-		registerRoute(routes, "/test", HTTP_POST, test_route);
-		registerRoute(routes + 1, "/test2", HTTP_POST, test_route2);
-		registerRoute(routes + 2, "*", HTTP_GET, serve_file);
-
-
+		LOG_DEBUG("Setup pipeline context");
 		PipelineContextInit context = {
 			.request = &request,
 			.response = &response,
@@ -62,12 +63,14 @@ DWORD threadFunction(void* lpParam) {
 			.routesSize = routeSize,
 		};
 
+		LOG_INFO("Running request pipeline");
 		errno_t pipelineError = runPipeline(&context);
 		if(pipelineError != 0) {
 			LOG_ERROR("Error while handling request: %d", pipelineError);
 			// TODO short circuit with a stackalloced response 500 or some other error
 		}
 
+		LOG_DEBUG("Building http response");
 		size_t responseBufferLen = 0;
 		char* responseBuffer;
 		errno_t buildErr = buildHttpResponse(&response, &responseBuffer, &responseBufferLen);
@@ -78,6 +81,7 @@ DWORD threadFunction(void* lpParam) {
 			return 1;
 		}
 
+		LOG_DEBUG("Sending http response");
 		int sendResult = send(socket, responseBuffer, (int) responseBufferLen, 0);
 		if (sendResult == SOCKET_ERROR) {
 			LOG_FATAL("Socket {%d} send failed: %d", socket, WSAGetLastError());
@@ -89,9 +93,6 @@ DWORD threadFunction(void* lpParam) {
 			WSACleanup();
 			return 1;
 		}
-
-		// LOG_INFO("Socket {%d} bytes sent: %d", socket, sendResult);
-		// LOG_INFO("Socket:{%d} Message:\r\n%s", socket, responseBuffer);
 
 		free(responseBuffer);
 		freeHttpRequest(&request);

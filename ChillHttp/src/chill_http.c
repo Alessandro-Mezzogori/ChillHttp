@@ -68,6 +68,9 @@ int sanitizeHttpRequest(HttpRequest* request) {
 }
 
 void freeHttpRequest(HttpRequest* request) {
+	if (request == NULL)
+		return;
+
 	free(request->path);
 	hashtableFree(request->headers);
 	free(request->body);
@@ -130,6 +133,9 @@ errno_t setHttpResponseBody(HttpResponse* response, const char* body) {
 }
 
 void freeHttpResponse(HttpResponse* response) {
+	if (response == NULL)
+		return;
+
 	hashtableFree(response->headers);
 	free(response->body);
 }
@@ -268,6 +274,7 @@ size_t findWordBounds(char** start) {
 	return end - *start;
 }
 
+// TODO implment basic DDOS and slow loris protection via stopwatch / timer
 errno_t recvRequest(SOCKET socket, HttpRequest* req) {
 	// ##### Request init globals #####
 	errno_t err = 0;
@@ -432,6 +439,5 @@ errno_t recvRequest(SOCKET socket, HttpRequest* req) {
 _cleanup_request:
 	free(buffer);
 	freeHttpRequest(req);
-	//free(request);
 	return err;
 }
