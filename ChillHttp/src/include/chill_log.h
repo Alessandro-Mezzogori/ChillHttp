@@ -65,4 +65,3 @@ void flushLogger(FILE* out);
 
 #define LOG_FLUSH() flushLogger(LOG_FP)
 
-

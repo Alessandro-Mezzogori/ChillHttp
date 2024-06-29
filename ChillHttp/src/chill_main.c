@@ -11,6 +11,8 @@
 #include <chill_http.h>
 #include <chill_thread.h>
 
+#include <chill_threadpool.h>
+
 #pragma comment(lib, "ws2_32.lib") // Winsock library
 
 #define WinsockInitializedError 1
@@ -80,7 +82,36 @@ DWORD cleanupThreadFunction(void* lpParam) {
 	return 0;
 }
 
+struct Test {
+	int num;
+};
+
+void test(void* data) {
+	struct Test* test = (struct Test*) data;
+
+	LOG_INFO("Data %d", test->num);
+}
+
 int main() { 
+	ChillThreadPool pool;
+	chill_threadpool_init(&pool, 3);
+
+	ChillThread thread = pool.threads[0];
+	struct Test testData = {
+		.num = 3
+	};
+
+	ChillTask task = {
+		.data = &testData,
+		.work_function = test,
+	};
+	thread.m_task = &task;
+
+	WakeConditionVariable(&thread.m_hasWork);
+
+	chill_threadpool_free(&pool);
+
+	return; // TODO temp to test thread pool
 	setlocale(LC_ALL, "");
 
 	Config config;
