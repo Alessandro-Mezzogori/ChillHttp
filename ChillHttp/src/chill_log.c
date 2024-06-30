@@ -1,6 +1,7 @@
 #include <chill_log.h>
 
-const enum LOG_LEVEL log_runtime_level = LL_TRACE;
+//const enum LOG_LEVEL log_runtime_level = LL_TRACE;
+const enum LOG_LEVEL log_runtime_level = LL_INFO;
 const char* log_level_strings[] = {
 	"NONE",
 	"TRA",
@@ -19,7 +20,7 @@ int logger(FILE* out, const enum LOG_LEVEL lvl, char* const func, const unsigned
 	strftime(time, sizeof(time), "%c", tm);
 
 	// building passed format with appropriate variadic params
-	char const buffer[2048];
+	char buffer[2048];
 	memset(buffer, 0, sizeof(buffer));
 
 	va_list argptr;

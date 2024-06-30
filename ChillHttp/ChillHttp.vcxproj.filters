@@ -68,7 +68,7 @@
     <ClInclude Include="src\include\chill_pipeline_lualibs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="chill_threadpool.h">
+    <ClInclude Include="src\include\chill_threadpool.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -112,7 +112,9 @@
     <ClCompile Include="src\chill_pipeline_lualibs.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="chill_threadpool.c" />
+    <ClCompile Include="src\chill_threadpool.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="conf.lua" />

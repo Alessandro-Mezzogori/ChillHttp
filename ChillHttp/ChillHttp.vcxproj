@@ -147,7 +147,6 @@
     </Text>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="chill_threadpool.h" />
     <ClInclude Include="src\include\chill_cbuffer.h" />
     <ClInclude Include="src\include\chill_errors.h" />
     <ClInclude Include="src\include\chill_config.h" />
@@ -164,9 +163,9 @@
     <ClInclude Include="src\include\chill_socket.h" />
     <ClInclude Include="src\include\chill_string.h" />
     <ClInclude Include="src\include\chill_thread.h" />
+    <ClInclude Include="src\include\chill_threadpool.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="chill_threadpool.c" />
     <ClCompile Include="src\chill_cbuffer.c" />
     <ClCompile Include="src\chill_config.c" />
     <ClCompile Include="src\chill_lua.c" />
@@ -180,6 +179,7 @@
     <ClCompile Include="src\chill_router.c" />
     <ClCompile Include="src\chill_string.c" />
     <ClCompile Include="src\chill_thread.c" />
+    <ClCompile Include="src\chill_threadpool.c" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="conf.lua">

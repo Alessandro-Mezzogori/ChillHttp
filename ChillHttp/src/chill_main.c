@@ -84,32 +84,52 @@ DWORD cleanupThreadFunction(void* lpParam) {
 
 struct Test {
 	int num;
+	ChillThread* thread;
 };
 
-void test(void* data) {
+errno_t test(void* data) {
 	struct Test* test = (struct Test*) data;
 
-	LOG_INFO("Data %d", test->num);
+	LOG_INFO("Data %d %lu", test->num, test->thread->m_id);
+	return 0;
 }
 
 int main() { 
 	ChillThreadPool pool;
-	chill_threadpool_init(&pool, 3);
+	errno_t threadpool_init_err = chill_threadpool_init(&pool, 1);
+	if (threadpool_init_err != 0) {
+		LOG_FATAL("Thread pool init error, shutting down");
+		chill_threadpool_free(&pool);
+		return;
+	}
 
-	ChillThread thread = pool.threads[0];
-	struct Test testData = {
-		.num = 3
-	};
+	struct Test testData[10];
+	ChillTask tasks[10];
+	for (int i = 0; i < 10; ++i) {
+		testData[i].num = i;
+		tasks[i].data = &testData[i];
+		tasks[i].work_function = &test;
+		tasks[i].state = TaskCreated;
+	}
 
-	ChillTask task = {
-		.data = &testData,
-		.work_function = test,
-	};
-	thread.m_task = &task;
+	for (int i = 0; i < 10; ++i) {
+		ChillThread* thread = chill_threadpool_getfreethread(&pool);
+		if (thread != NULL) {
+			LOG_INFO("Scheduling on Thread %lu", thread->m_id);
+			testData[i].thread = thread;
+			thread->m_task = &tasks[i];
+			WakeConditionVariable(&thread->m_awake);
+		}
+		else {
+			LOG_INFO("No free thread");
+		}
+	}
 
-	WakeConditionVariable(&thread.m_hasWork);
+	Sleep(5000);
 
+	LOG_INFO("Pre free");
 	chill_threadpool_free(&pool);
+	LOG_INFO("Post free");
 
 	return; // TODO temp to test thread pool
 	setlocale(LC_ALL, "");
