@@ -24,7 +24,7 @@ errno_t chill_threadpool_free(ChillThreadPool* pool) {
 
 int _ThreadCancelRequested(ChillThread* thread) {  
 	if (thread->m_request == RequestCancel) {
-		thread->t_state = ThreadCancelRequested;
+		thread->t_state = ThreadSuspendRequested;
 		return TRUE;
 	}
 
@@ -55,7 +55,7 @@ DWORD chill_threadpool_thread_function(void* lpParam) {
 
 		// check if thread has work to do.
 		while (_ThreadGenericCloseRequested(thread) == FALSE) {
-			thread->t_state = ThreadIdle;
+			thread->t_state = ThreadStopRequested;
 			SleepConditionVariableCS(
 				&thread->m_awake,
 				&thread->m_lock,
@@ -65,9 +65,9 @@ DWORD chill_threadpool_thread_function(void* lpParam) {
 
 		LOG_DEBUG("out loop %lu", thread->m_id);
 		if (_ThreadGenericCloseRequested(thread) == TRUE) {
-			if (thread->t_state == ThreadCancelRequested) {
+			if (thread->t_state == ThreadSuspendRequested) {
 				LOG_DEBUG("Thread %lu cancelled", thread->m_id);
-				thread->t_state = ThreadCancelled;
+				thread->t_state = ThreadBackground;
 			}
 			else if (thread->t_state == ThreadStopRequested) {
 				LOG_DEBUG("Thread %lu stopped", thread->m_id);
@@ -113,6 +113,7 @@ errno_t _chill_thread_init(ChillThread* thread) {
 		DWORD error = GetLastError();
 		LOG_ERROR("Thread creation gone wrong: Error Code %", error);
 		return error;
+
 	}
 
 	return 0;
@@ -155,7 +156,7 @@ errno_t _chill_thread_stop(ChillThread* thread) {
 // naive, only for testing purposes
 ChillThread* chill_threadpool_getfreethread(ChillThreadPool* pool) {
 	for (int i = 0; i < pool->threadSize; ++i) {
-		if (pool->threads[i].t_state == ThreadIdle) {
+		if (pool->threads[i].t_state == ThreadStopRequested) {
 			return &pool->threads[i];
 		}
 	}

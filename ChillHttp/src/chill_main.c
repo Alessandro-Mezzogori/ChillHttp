@@ -9,7 +9,7 @@
 #include <chill_hashtable.h>
 #include <chill_config.h>
 #include <chill_http.h>
-#include <chill_thread.h>
+#include <chill_thread_old.h>
 
 #include <chill_threadpool.h>
 

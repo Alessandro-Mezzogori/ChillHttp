@@ -56,7 +56,7 @@
     <ClInclude Include="src\include\chill_socket.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\chill_thread.h">
+    <ClInclude Include="src\include\chill_thread_old.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\include\chill_lua_boolean_array.h">
@@ -69,6 +69,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\include\chill_threadpool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\chill_thread.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\chill_lock.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -100,7 +106,7 @@
     <ClCompile Include="src\chill_router.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\chill_thread.c">
+    <ClCompile Include="src\chill_thread_old.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\chill_lua_api.c">
@@ -113,6 +119,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\chill_threadpool.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\chill_thread.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\chill_lock.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

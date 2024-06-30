@@ -151,6 +151,7 @@
     <ClInclude Include="src\include\chill_errors.h" />
     <ClInclude Include="src\include\chill_config.h" />
     <ClInclude Include="src\include\chill_connection.h" />
+    <ClInclude Include="src\include\chill_lock.h" />
     <ClInclude Include="src\include\chill_lua.h" />
     <ClInclude Include="src\include\chill_hashtable.h" />
     <ClInclude Include="src\include\chill_http.h" />
@@ -163,11 +164,13 @@
     <ClInclude Include="src\include\chill_socket.h" />
     <ClInclude Include="src\include\chill_string.h" />
     <ClInclude Include="src\include\chill_thread.h" />
+    <ClInclude Include="src\include\chill_thread_old.h" />
     <ClInclude Include="src\include\chill_threadpool.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\chill_cbuffer.c" />
     <ClCompile Include="src\chill_config.c" />
+    <ClCompile Include="src\chill_lock.c" />
     <ClCompile Include="src\chill_lua.c" />
     <ClCompile Include="src\chill_hashtable.c" />
     <ClCompile Include="src\chill_http.c" />
@@ -179,6 +182,7 @@
     <ClCompile Include="src\chill_router.c" />
     <ClCompile Include="src\chill_string.c" />
     <ClCompile Include="src\chill_thread.c" />
+    <ClCompile Include="src\chill_thread_old.c" />
     <ClCompile Include="src\chill_threadpool.c" />
   </ItemGroup>
   <ItemGroup>
