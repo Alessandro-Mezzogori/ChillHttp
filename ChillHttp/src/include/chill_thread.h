@@ -2,15 +2,10 @@
 
 // TODO: remove depencency from windows header, prefer a notation with implemenation files per platform like chill_thread.windows.c
 // should be done after working prototype and exploration of problem space
-#include <windows.h>
+#include <chill_log.h>
+#include <stdbool.h>
 
-typedef enum ChillThreadRequest {
-	RequestNone		= 0,
-	RequestCancel	= 1,
-	RequestStop		= 2,
-} ChillThreadRequest;
-
-typedef enum ChillThreadState {
+typedef enum _ChillThreadState {
 	ThreadRunning			= 0,
 	ThreadStopRequested		= 1,	// thread is blocked - wait, sleep, join ....
 	ThreadBackground		= 2,
@@ -21,25 +16,24 @@ typedef enum ChillThreadState {
 	ThreadAborted			= 64
 } ChillThreadState;
 
-// 
-typedef errno_t(*ChillThreadPWF)(void* data);
-
-typedef struct ChillThread {
-	unsigned int _id;
-	HANDLE _hndl;	// TODO remove HANDLE type for a platform agnostic implementation
-	ChillThreadState _state;
-	CRITICAL_SECTION
-
-	errno_t (*work)(void* data);
+typedef struct _ChillThread ChillThread;
+typedef struct _ChillThreadInit {
+	errno_t(*work)(void* data);
 	void* data;
-} ChillThread;
+	bool delayStart;
+} ChillThreadInit;
 
-errno_t chill_thread_init(ChillThread* thread);
+errno_t chill_thread_init(ChillThread* thread, ChillThreadInit* init);
 errno_t chill_thread_start(ChillThread* thread);
-errno_t chill_thread_join(ChillThread* thread);
-errno_t chill_thread_cancel(ChillThread* thread);
-errno_t chill_thread_abort(ChillThread* thread);
-errno_t chill_thread_stop(ChillThread* thread);
+errno_t chill_thread_join(ChillThread* thread, unsigned long ms);
+//errno_t chill_thread_cancel(ChillThread* thread);
+//errno_t chill_thread_abort(ChillThread* thread); // TODO
+//errno_t chill_thread_stop(ChillThread* thread);
+errno_t chill_thread_cleanup(ChillThread* thread);
+
+ChillThreadState chill_thread_getstate(ChillThread* thread);
+size_t chill_thread_getid(ChillThread* thread);
+void* chill_thread_getdata(ChillThread* data);
 
 
 // Monitor and lock usage 

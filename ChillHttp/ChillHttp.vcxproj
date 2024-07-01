@@ -170,7 +170,7 @@
   <ItemGroup>
     <ClCompile Include="src\chill_cbuffer.c" />
     <ClCompile Include="src\chill_config.c" />
-    <ClCompile Include="src\chill_lock.c" />
+    <ClCompile Include="src\chill_lock.windows.c" />
     <ClCompile Include="src\chill_lua.c" />
     <ClCompile Include="src\chill_hashtable.c" />
     <ClCompile Include="src\chill_http.c" />
@@ -181,7 +181,7 @@
     <ClCompile Include="src\chill_pipeline_lualibs.c" />
     <ClCompile Include="src\chill_router.c" />
     <ClCompile Include="src\chill_string.c" />
-    <ClCompile Include="src\chill_thread.c" />
+    <ClCompile Include="src\chill_thread.windows.c" />
     <ClCompile Include="src\chill_thread_old.c" />
     <ClCompile Include="src\chill_threadpool.c" />
   </ItemGroup>

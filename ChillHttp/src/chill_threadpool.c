@@ -1,5 +1,6 @@
 #include "chill_threadpool.h"
 
+/*
 errno_t chill_threadpool_free(ChillThreadPool* pool) {
 	for (int i = 0; i < pool->threadSize; ++i) {
 		ChillThread* thread = &pool->threads[i];
@@ -163,3 +164,4 @@ ChillThread* chill_threadpool_getfreethread(ChillThreadPool* pool) {
 
 	return NULL;
 }
+*/

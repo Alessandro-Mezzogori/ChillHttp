@@ -121,10 +121,10 @@
     <ClCompile Include="src\chill_threadpool.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\chill_thread.c">
+    <ClCompile Include="src\chill_thread.windows.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\chill_lock.c">
+    <ClCompile Include="src\chill_lock.windows.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -10,8 +10,9 @@
 #include <chill_config.h>
 #include <chill_http.h>
 #include <chill_thread_old.h>
+#include <chill_thread.h>
 
-#include <chill_threadpool.h>
+//#include <chill_threadpool.h>
 
 #pragma comment(lib, "ws2_32.lib") // Winsock library
 
@@ -89,12 +90,32 @@ struct Test {
 
 errno_t test(void* data) {
 	struct Test* test = (struct Test*) data;
+	ChillThreadState state = chill_thread_getstate(test->thread);
+	size_t id = chill_thread_getid(test->thread);
 
-	LOG_INFO("Data %d %lu", test->num, test->thread->m_id);
+	LOG_INFO("Data %d %d %lu", test->num, state, id);
 	return 0;
 }
 
 int main() { 
+	ChillThread* thread;
+
+	struct Test testData = {
+		.num = 420
+	};
+
+	ChillThreadInit init = {
+		.data = &testData,
+		.work = test,
+		.delayStart = true,
+	};
+	chill_thread_init(&init, &thread);
+	testData.thread = thread;
+	chill_thread_start(thread);
+
+	chill_thread_cleanup(thread);
+	return
+	/*
 	ChillThreadPool pool;
 	errno_t threadpool_init_err = chill_threadpool_init(&pool, 1);
 	if (threadpool_init_err != 0) {
@@ -132,6 +153,7 @@ int main() {
 	LOG_INFO("Post free");
 
 	return; // TODO temp to test thread pool
+	*/
 	setlocale(LC_ALL, "");
 
 	Config config;
