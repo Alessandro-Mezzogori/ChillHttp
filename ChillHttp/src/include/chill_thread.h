@@ -23,11 +23,11 @@ typedef struct _ChillThreadInit {
 	bool delayStart;
 } ChillThreadInit;
 
-errno_t chill_thread_init(ChillThread* thread, ChillThreadInit* init);
+errno_t chill_thread_init(ChillThreadInit* init, ChillThread** threadptr);
 errno_t chill_thread_start(ChillThread* thread);
 errno_t chill_thread_join(ChillThread* thread, unsigned long ms);
 //errno_t chill_thread_cancel(ChillThread* thread);
-//errno_t chill_thread_abort(ChillThread* thread); // TODO
+errno_t chill_thread_abort(ChillThread* thread); 
 //errno_t chill_thread_stop(ChillThread* thread);
 errno_t chill_thread_cleanup(ChillThread* thread);
 

@@ -1,6 +1,8 @@
 #include <chill_thread.h>
 #include <windows.h>
 
+#define EVENT_NUM 1
+
 struct _ChillThread {
 	DWORD id;
 	HANDLE hndl;	
@@ -17,11 +19,22 @@ struct _ChillThread {
 
 errno_t chill_thread_work(void* data) {
 	ChillThread* thread = (ChillThread*)data;
+	if (thread->work == NULL) {
+		LOG_WARN("Spawned thread %ul without work function", thread->id);
+		return 1;
+	}
 
+	errno_t workError = thread->work(thread->data);
+	if (workError != 0) {
+		LOG_WARN("Error in thread %u: Error Code %ul", thread->id, workError);
+	}
+
+	return workError;
+	/*
 	int exit = 0;
 	while (!exit) {
 		EnterCriticalSection(&thread->criticalSection);
-		while (thread->state == ThreadWaitSleepJoin) {
+		while (work == false) {
 			SleepConditionVariableCS(
 				&thread->conditionalVariable,
 				&thread->criticalSection,
@@ -30,7 +43,6 @@ errno_t chill_thread_work(void* data) {
 		}
 
 		thread->state = ThreadRunning;
-
 		LeaveCriticalSection(&thread->criticalSection);
 
 		errno_t workError = thread->work(thread->data);
@@ -38,6 +50,7 @@ errno_t chill_thread_work(void* data) {
 			LOG_WARN("Error in thread %u: Error Code %ul", thread->id, workError);
 		}
 	}
+	*/
 }
 
 errno_t chill_thread_init(ChillThreadInit* init, ChillThread** threadptr) {
@@ -78,6 +91,9 @@ errno_t chill_thread_init(ChillThreadInit* init, ChillThread** threadptr) {
 
 	*threadptr = thread;
 	return 0;
+_err:
+	chill_thread_cleanup(thread);
+	return 1;
 }
 
 errno_t chill_thread_start(ChillThread* thread) {
@@ -113,6 +129,11 @@ errno_t chill_thread_join(ChillThread* thread, unsigned long ms) {
 	return 0;
 }
 
+errno_t chill_thread_abort(ChillThread* thread) {
+	TerminateProcess(&thread->hndl, 1);
+	chill_thread_cleanup(thread);
+}
+
 ChillThreadState chill_thread_getstate(ChillThread* thread) {
 	return thread->state;
 }
@@ -134,14 +155,12 @@ errno_t chill_thread_abort(ChillThread* thread) {
 errno_t chill_thread_cleanup(ChillThread* thread) {
 	LOG_TRACE("Cleanup thread %u", thread->id);
 
-	errno_t result = chill_thread_join(thread, INFINITE);
-	if (result == 0) {
-		DeleteCriticalSection(&thread->criticalSection);
-		LOG_TRACE("Cleanup thread %u success", thread->id);
-	}
-	else {
-		LOG_TRACE("Cleanup thread %u failure, Error Code: %d", thread->id, result);
+	DeleteCriticalSection(&thread->criticalSection);
+
+	if (thread->hndl != NULL) {
+		CloseHandle(thread->hndl);
 	}
 
-	return result;
+	LOG_TRACE("Cleanup thread %u success", thread->id);
+	return 0;
 }
