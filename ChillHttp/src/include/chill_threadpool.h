@@ -12,29 +12,33 @@ typedef enum ChillTaskState {
 	TaskCancelled, // TODO support cancellation token like
 } ChillTaskState;
 
-typedef struct ChillTask {
+
+typedef void (*ChillTaskWork)(void* data);
+typedef struct ChillTaskInit {
 	// Work function 
-	errno_t (*work_function)(void* data);
+	ChillTaskWork work;
 
 	// Data passed to the work function 
 	void* data;
+} ChillTaskInit;
 
-	// State of the task
-	ChillTaskState state;
+typedef struct _ChillThreadPool ChillThreadPool;
+typedef struct _ChillTask ChillTask;
 
-	// Result of the task, ownership is of who destroys the task ( evaluate the use of an optional cleanup function )
-	void* result;
-} ChillTask;
-
-typedef struct ChillThreadPool {
-	size_t threadSize;
-	ChillThread* threads;
-} ChillThreadPool;
+typedef struct _ChillThreadPoolInit {
+	unsigned short min_thread;
+	unsigned short max_thread;
+} ChillThreadPoolInit;
 
 // Thread pool needs a function pointer to be generic and allow diverse uses instead of a task runner like right now
-errno_t chill_threadpool_init(ChillThreadPool* pool, int threadNumber);
+errno_t chill_threadpool_init(ChillThreadPool** pool, ChillThreadPoolInit* init);
 errno_t chill_threadpool_free(ChillThreadPool* pool);
-ChillThread* chill_threadpool_getfreethread(ChillThreadPool* pool);
+
+ChillTask* chill_task_create(ChillThreadPool* pool, ChillTaskInit* init);
+errno_t chill_task_submit(ChillTask* task);
+errno_t chill_task_free(ChillTask* task);
+errno_t chill_task_wait(ChillTask* task);
+errno_t chill_task_wait_multiple(ChillTask* task, size_t num);
 
 // get thread info
 // assign work to thread

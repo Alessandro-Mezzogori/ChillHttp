@@ -166,6 +166,7 @@
     <ClInclude Include="src\include\chill_thread.h" />
     <ClInclude Include="src\include\chill_thread_old.h" />
     <ClInclude Include="src\include\chill_threadpool.h" />
+    <ClInclude Include="src\include\concurrency\chill_concurrent_queue.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\chill_cbuffer.c" />
@@ -182,8 +183,10 @@
     <ClCompile Include="src\chill_router.c" />
     <ClCompile Include="src\chill_string.c" />
     <ClCompile Include="src\chill_thread.windows.c" />
+    <ClCompile Include="src\chill_threadpool.old.c" />
     <ClCompile Include="src\chill_thread_old.c" />
-    <ClCompile Include="src\chill_threadpool.c" />
+    <ClCompile Include="src\chill_threadpool.windows.c" />
+    <ClCompile Include="src\concurrency\chill_concurrent_queue.c" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="conf.lua">

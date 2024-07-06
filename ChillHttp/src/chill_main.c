@@ -11,14 +11,15 @@
 #include <chill_http.h>
 #include <chill_thread_old.h>
 #include <chill_thread.h>
-
-//#include <chill_threadpool.h>
+#include <chill_threadpool.h>
 
 #pragma comment(lib, "ws2_32.lib") // Winsock library
 
 #define WinsockInitializedError 1
 #define SocketCreationError 2
 #define ListenError 3
+
+#define task_num 10000
 
 void freeChildThreadDescriptor(PCTD child) {
 	if (child->hThread != NULL) {
@@ -83,92 +84,61 @@ DWORD cleanupThreadFunction(void* lpParam) {
 	return 0;
 }
 
-struct Test {
+typedef struct Test {
 	int num;
-	ChillThread* thread;
-};
+} T;
 
-errno_t test(void* data) {
-	struct Test* test = (struct Test*) data;
-	ChillThreadState state = chill_thread_getstate(test->thread);
-	size_t id = chill_thread_getid(test->thread);
+void test_work(void* context) {
+	T* test = (T*) context;
 
-	LOG_INFO("Data %d %d %lu", test->num, state, id);
-	return 0;
+	//LOG_INFO("Data %d", test->num);
+	LOG_INFO("La topi puzza");
 }
 
 int main() { 
-	ChillThread* thread[3];
-	struct Test testData[3]; 
+	ChillThreadPool* pool;
+	T testData[task_num]; 
+	ChillTask* tasks[task_num];
+	ChillTaskInit taskinit[task_num];
 
-	for (int i = 0; i < 3; i++) {
+	for (int i = 0; i < task_num; i++) {
 		testData[i].num = i;
-
-		ChillThreadInit init = {
-			.data = &testData[i],
-			.work = test,
-			.delayStart = true,
-		};
-		chill_thread_init(&init, &thread[i]);
-		testData[i].thread = thread[i];
 	}
 
-	for (int i = 0; i < 3; i++) {
-		chill_thread_start(thread[i]);
-	}
+	LOG_INFO("Threadpool initialization");
+	ChillThreadPoolInit init = {
+		.max_thread = 2,
+		.min_thread = 1,
+	};
+	chill_threadpool_init(&pool, &init);
 
-	for (int i = 0; i < 3; i++) {
-		size_t id = chill_thread_getid(thread[i]);
-		ChillThreadState state_before = chill_thread_getstate(thread[i]);
-		LOG_INFO("BEFORE JOIN %d %lu", state_before, id);
+	LOG_INFO("Task creation");
+	for (int i = 0; i < task_num; i++) {
+		taskinit[i].data = &testData[i];
+		taskinit[i].work = test_work;
 
-		chill_thread_join(thread[i], -1);
-
-		ChillThreadState state_after = chill_thread_getstate(thread[i]);
-		LOG_INFO("AFTER JOIN %d %lu", state_after, id);
-
-		chill_thread_cleanup(&thread[i]);
-	}
-	return
-	/*
-	ChillThreadPool pool;
-	errno_t threadpool_init_err = chill_threadpool_init(&pool, 1);
-	if (threadpool_init_err != 0) {
-		LOG_FATAL("Thread pool init error, shutting down");
-		chill_threadpool_free(&pool);
-		return;
-	}
-
-	struct Test testData[10];
-	ChillTask tasks[10];
-	for (int i = 0; i < 10; ++i) {
-		testData[i].num = i;
-		tasks[i].data = &testData[i];
-		tasks[i].work_function = &test;
-		tasks[i].state = TaskCreated;
-	}
-
-	for (int i = 0; i < 10; ++i) {
-		ChillThread* thread = chill_threadpool_getfreethread(&pool);
-		if (thread != NULL) {
-			LOG_INFO("Scheduling on Thread %lu", thread->m_id);
-			testData[i].thread = thread;
-			thread->m_task = &tasks[i];
-			WakeConditionVariable(&thread->m_awake);
-		}
-		else {
-			LOG_INFO("No free thread");
+		tasks[i] = chill_task_create(pool, &taskinit[i]);
+		if (tasks[i] == NULL) {
+			LOG_ERROR("Task creation failed %d", i);
+			break;
 		}
 	}
 
-	Sleep(5000);
+	LOG_INFO("Task submit");
+	for (int i = 0; i < task_num; i++) {
+		chill_task_submit(tasks[i]);
+	}
 
-	LOG_INFO("Pre free");
-	chill_threadpool_free(&pool);
-	LOG_INFO("Post free");
+	LOG_INFO("Wait tasks");
+	chill_task_wait_multiple(tasks, task_num);
 
-	return; // TODO temp to test thread pool
-	*/
+	LOG_INFO("Cleanup");
+	// TODO cleanup of test tasks
+	chill_threadpool_free(pool);
+
+	return 0;
+
+
 	setlocale(LC_ALL, "");
 
 	Config config;

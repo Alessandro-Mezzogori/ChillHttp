@@ -15,6 +15,12 @@
     <Filter Include="Source Files">
       <UniqueIdentifier>{d2c63827-a14c-4744-8dc2-e26e79e3bdfb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\concurrency">
+      <UniqueIdentifier>{d3539ba8-4f04-4eb8-ae8a-d9b25844874c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\concurrency">
+      <UniqueIdentifier>{125528ae-bb3d-4516-bd50-47c8402fabe4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="conf.txt" />
@@ -77,6 +83,9 @@
     <ClInclude Include="src\include\chill_lock.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\include\concurrency\chill_concurrent_queue.h">
+      <Filter>Header Files\concurrency</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\chill_cbuffer.c">
@@ -118,7 +127,7 @@
     <ClCompile Include="src\chill_pipeline_lualibs.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\chill_threadpool.c">
+    <ClCompile Include="src\chill_threadpool.windows.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\chill_thread.windows.c">
@@ -126,6 +135,12 @@
     </ClCompile>
     <ClCompile Include="src\chill_lock.windows.c">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\chill_threadpool.old.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\concurrency\chill_concurrent_queue.c">
+      <Filter>Source Files\concurrency</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
