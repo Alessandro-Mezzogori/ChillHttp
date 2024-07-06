@@ -20,13 +20,11 @@ errno_t serve_file(const Config* config, HttpRequest* request, HttpResponse* res
 
 #pragma endregion
 
-DWORD threadFunction(void* lpParam) {
-	PSOCKTD pdata = (PSOCKTD)lpParam;
-	PMTData mtData = pdata->pmtData;
-	int threadId = pdata->threadId;
-	SOCKET socket = pdata->socket;
-
-	LOG_INFO("Thread {%d} socket: {%d} initiliazed", threadId, socket);
+void task_function(void* lpParam) {
+	TaskContext* data = (TaskContext*)lpParam;
+	Config* config = data->config;
+	SOCKET socket = data->httpcontext.socket;
+	ConnectionData* connectionData = &data->httpcontext.connectionData;
 
 	LOG_DEBUG("Registering routes...");
 	size_t routeSize = 3;
@@ -35,30 +33,43 @@ DWORD threadFunction(void* lpParam) {
 	registerRoute(routes + 1, "/test2", HTTP_POST, test_route2);
 	registerRoute(routes + 2, "*", HTTP_GET, serve_file);
 
+	// TODO remove do while in task worker function
+	// to do so we need a global registry for the current open connections
+	// probably the best way is having a concorrent map and a thread updating some info about the connection
+	// life the connection lifetime ecc... or if it is marked as a bad actor and forcibly closed
+	// ConnectionData could be a good starting point for the registry
+
 	do {
+		int loop_cleanup = 0;
 		HttpRequest request;
+		HttpResponse response;
+		size_t responseBufferLen = 0;
+		char* responseBuffer = NULL;
+
 		errno_t err = recvRequest(socket, &request);
 		if (err != 0) {
 			LOG_ERROR("Error while receiving request: %d", err);
+			connectionData->connectionStatus = CONNECTION_STATUS_ABORTING;
 			break;
 		}
+		loop_cleanup = 1; // request rcved
 		LOG_DEBUG("Request rcved: %s", request.path);
 			
-		HttpResponse response;
 		errno_t responseCreateErr = createHttpResponse(&response);
 		if(responseCreateErr != 0){
 			// TODO short circuit with a stackalloced response 500
 			LOG_ERROR("Error while creating response: %d", responseCreateErr);
-			freeHttpRequest(&request);
-			return 1;
+			connectionData->connectionStatus = CONNECTION_STATUS_ABORTING;
+			goto _loop_cleanup;
 		}
+		loop_cleanup = 2; // response created
 
 		LOG_DEBUG("Setup pipeline context");
 		PipelineContextInit context = {
 			.request = &request,
 			.response = &response,
-			.connectionData = &pdata->connectionData,
-			.config = &mtData->config,
+			.connectionData = connectionData,
+			.config = config,
 			.routes = routes,
 			.routesSize = routeSize,
 		};
@@ -71,44 +82,47 @@ DWORD threadFunction(void* lpParam) {
 		}
 
 		LOG_DEBUG("Building http response");
-		size_t responseBufferLen = 0;
-		char* responseBuffer;
 		errno_t buildErr = buildHttpResponse(&response, &responseBuffer, &responseBufferLen);
 		if (buildErr != 0) {
 			LOG_ERROR("Error while building response: %d", buildErr);
-			freeHttpRequest(&request);
-			freeHttpResponse(&response);
-			return 1;
+			connectionData->connectionStatus = CONNECTION_STATUS_ABORTING;
+			goto _loop_cleanup;
 		}
+		loop_cleanup = 3; // built http response
 
 		LOG_DEBUG("Sending http response");
 		int sendResult = send(socket, responseBuffer, (int) responseBufferLen, 0);
 		if (sendResult == SOCKET_ERROR) {
 			LOG_FATAL("Socket {%d} send failed: %d", socket, WSAGetLastError());
-			closesocket(socket);
-
-			free(responseBuffer);
-			freeHttpRequest(&request);
-			freeHttpResponse(&response);
-			WSACleanup();
-			return 1;
+			loop_cleanup = 10000; // socket error
+			connectionData->connectionStatus = CONNECTION_STATUS_ABORTING;
+			goto _loop_cleanup;
 		}
 
-		free(responseBuffer);
-		freeHttpRequest(&request);
-		freeHttpResponse(&response);
-	} while (pdata->connectionData.connectionStatus == CONNECTION_STATUS_CONNECTED);
+_loop_cleanup:
+	switch (loop_cleanup) {
+		case 10000:
+			closesocket(socket);
+			socket = NULL;
+			WSACleanup();
+		case 3:
+			free(responseBuffer);
+		case 2:
+			freeHttpResponse(&response);
+		case 1:
+			freeHttpRequest(&request);
+		default:
+			break;
+	}
+	} while (connectionData->connectionStatus == CONNECTION_STATUS_CONNECTED);
 
 	if (shutdown(socket, SD_SEND) == SOCKET_ERROR) {
 		LOG_FATAL("Socket {%d} Shutdown failed: %d", socket, WSAGetLastError());
-		closesocket(socket);
-		WSACleanup();
-		return 1;
 	}
 
-	LOG_TRACE("Closing thread {%d} socket {%d}", threadId, socket);
+	data->httpcontext.isActive = false;
 	closesocket(socket);
+	WSACleanup(); // TODO idk if this is good here
 
-	pdata->isActive = false;
-	return 0;
+	free(data); // TODO better free of task context
 }

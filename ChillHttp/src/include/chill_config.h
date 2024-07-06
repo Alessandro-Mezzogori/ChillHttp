@@ -12,7 +12,7 @@
 #define MAX_CONFIG_LINE_LEN 256
 #define MAX_CONFIG_PORT_LEN 6
 
-typedef struct {
+typedef struct _Config {
 	// ##### SERVING_FOLDER #####
 	char servingFolder[MAX_CONFIG_LINE_LEN];
 	size_t servingFolderLen;

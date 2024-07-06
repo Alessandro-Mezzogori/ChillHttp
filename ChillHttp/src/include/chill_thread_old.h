@@ -16,30 +16,24 @@
 #include <chill_connection.h>
 
 typedef struct MainThreadData MTData, *PMTData;
-typedef struct SocketThreadData SOCKTD, *PSOCKTD;
-typedef struct ChildThreadDescriptor CTD, *PCTD;
+typedef struct _HttpContext HttpContext;
+typedef struct _TaskContext TaskContext;
 
-
-struct SocketThreadData {
-	int threadId;
+struct _HttpContext {
 	SOCKET socket;
 	bool isActive;
 	ConnectionData connectionData;
-	PMTData pmtData;
 };
 
-struct ChildThreadDescriptor {
-	DWORD dwThreadId;
-	HANDLE hThread;
-	PSOCKTD pdata;
+struct _TaskContext {
+	HttpContext httpcontext;
+	const Config* config;
 };
 
 struct MainThreadData {
 	SOCKET serverSocket;
-	PCTD childs;
 	BOOL isRunning;
-	unsigned int activeThreadCount;
 	Config config;
 };
 
-DWORD threadFunction(void* lpParam);
+void task_function(void* lpParam);
