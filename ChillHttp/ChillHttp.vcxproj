@@ -141,12 +141,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Text Include="conf.txt">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-    </Text>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="src\include\chill_cbuffer.h" />
     <ClInclude Include="src\include\chill_errors.h" />
     <ClInclude Include="src\include\chill_config.h" />

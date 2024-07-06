@@ -23,9 +23,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="conf.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="src\include\chill_cbuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
