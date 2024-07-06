@@ -29,7 +29,7 @@ errno_t chill_thread_join(ChillThread* thread, unsigned long ms);
 //errno_t chill_thread_cancel(ChillThread* thread);
 errno_t chill_thread_abort(ChillThread* thread); 
 //errno_t chill_thread_stop(ChillThread* thread);
-errno_t chill_thread_cleanup(ChillThread* thread);
+errno_t chill_thread_cleanup(ChillThread** thread);
 
 ChillThreadState chill_thread_getstate(ChillThread* thread);
 size_t chill_thread_getid(ChillThread* thread);

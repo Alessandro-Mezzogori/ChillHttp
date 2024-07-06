@@ -54,17 +54,24 @@ errno_t chill_thread_work(void* data) {
 }
 
 errno_t chill_thread_init(ChillThreadInit* init, ChillThread** threadptr) {
+	DWORD err = 0;
+	ChillThread* thread = NULL;
+
 	if (init == NULL) { 
-		return 1;
+		err = 1;
+		goto _err;
 	}
 
 	if (init->work == NULL) {
-		return 2;
+		err = 2;
+		goto _err;
 	}
 
-	ChillThread* thread = malloc(sizeof(ChillThread));
+	thread = malloc(sizeof(ChillThread));
+
 	if (thread == NULL) {
-		return 3;
+		err = 3;
+		goto _err;
 	}
 
 	DWORD threadId = 0;
@@ -78,7 +85,8 @@ errno_t chill_thread_init(ChillThreadInit* init, ChillThread** threadptr) {
 	);
 
 	if (hdnl == 0) {
-		return GetLastError();
+		err = GetLastError();
+		goto _err;
 	}
 
 	thread->id = threadId;
@@ -92,16 +100,20 @@ errno_t chill_thread_init(ChillThreadInit* init, ChillThread** threadptr) {
 	*threadptr = thread;
 	return 0;
 _err:
-	chill_thread_cleanup(thread);
-	return 1;
+	if (thread != NULL) {
+		chill_thread_cleanup(thread);
+	}
+
+	return err;
 }
 
 errno_t chill_thread_start(ChillThread* thread) {
 	EnterCriticalSection(&thread->criticalSection);
-	thread->state = ThreadRunning;
-	LeaveCriticalSection(&thread->criticalSection);
 
+	thread->state = ThreadRunning;
 	DWORD result = ResumeThread(thread->hndl);
+
+	LeaveCriticalSection(&thread->criticalSection);
 
 	return result != -1 ? 0 : 1;
 }
@@ -112,6 +124,10 @@ errno_t chill_thread_join(ChillThread* thread, unsigned long ms) {
 	LeaveCriticalSection(&thread->criticalSection);
 
 	WakeConditionVariable(&thread->conditionalVariable);
+
+	if (ms < 0) {
+		ms = INFINITE;
+	}
 
 	DWORD result = WaitForSingleObject(thread->hndl, ms);
 	if (result == WAIT_FAILED) {
@@ -152,15 +168,24 @@ errno_t chill_thread_abort(ChillThread* thread) {
 }
 */
 
-errno_t chill_thread_cleanup(ChillThread* thread) {
+errno_t chill_thread_cleanup(ChillThread** threadptr) {
+	if (threadptr == NULL) {
+		return 1;
+	}
+
+	ChillThread* thread = *threadptr;
 	LOG_TRACE("Cleanup thread %u", thread->id);
 
 	DeleteCriticalSection(&thread->criticalSection);
 
 	if (thread->hndl != NULL) {
 		CloseHandle(thread->hndl);
+		thread->hndl = NULL;
 	}
 
-	LOG_TRACE("Cleanup thread %u success", thread->id);
+	LOG_TRACE("Cleanup thread %lu success", thread->id);
+
+	// TODO set values to NULL
+
 	return 0;
 }

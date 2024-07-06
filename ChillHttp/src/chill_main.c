@@ -98,22 +98,37 @@ errno_t test(void* data) {
 }
 
 int main() { 
-	ChillThread* thread;
+	ChillThread* thread[3];
+	struct Test testData[3]; 
 
-	struct Test testData = {
-		.num = 420
-	};
+	for (int i = 0; i < 3; i++) {
+		testData[i].num = i;
 
-	ChillThreadInit init = {
-		.data = &testData,
-		.work = test,
-		.delayStart = true,
-	};
-	chill_thread_init(&init, &thread);
-	testData.thread = thread;
-	chill_thread_start(thread);
+		ChillThreadInit init = {
+			.data = &testData[i],
+			.work = test,
+			.delayStart = true,
+		};
+		chill_thread_init(&init, &thread[i]);
+		testData[i].thread = thread[i];
+	}
 
-	chill_thread_cleanup(thread);
+	for (int i = 0; i < 3; i++) {
+		chill_thread_start(thread[i]);
+	}
+
+	for (int i = 0; i < 3; i++) {
+		size_t id = chill_thread_getid(thread[i]);
+		ChillThreadState state_before = chill_thread_getstate(thread[i]);
+		LOG_INFO("BEFORE JOIN %d %lu", state_before, id);
+
+		chill_thread_join(thread[i], -1);
+
+		ChillThreadState state_after = chill_thread_getstate(thread[i]);
+		LOG_INFO("AFTER JOIN %d %lu", state_after, id);
+
+		chill_thread_cleanup(&thread[i]);
+	}
 	return
 	/*
 	ChillThreadPool pool;
