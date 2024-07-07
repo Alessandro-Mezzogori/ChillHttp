@@ -17,3 +17,4 @@ while being extendible via LUA scripting and configuration
 	- [ ] pipeline.lua
 	- [ ] serving folder
 	- [ ] ecc...
+- [ ] openapi support from lua
