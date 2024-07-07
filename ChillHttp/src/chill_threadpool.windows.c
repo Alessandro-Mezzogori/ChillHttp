@@ -118,6 +118,8 @@ void windows_thread_work(PTP_CALLBACK_INSTANCE instance, PVOID* context, PTP_WOR
 	ChillTask* task = (ChillTask*) context;
 
 	task->cbk(task->data);
+
+	chill_task_free(task);
 }
 
 ChillTask* chill_task_create(ChillThreadPool* pool, ChillTaskInit* init) {

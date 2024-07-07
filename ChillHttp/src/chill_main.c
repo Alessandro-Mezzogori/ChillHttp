@@ -119,13 +119,13 @@ int main() {
 		SOCKET clientSocket = accept(serverSocket, NULL, NULL);
 		if(clientSocket == INVALID_SOCKET) {
 			// TODO handle error
-			LOG_FATAL("Accept failed: %d", WSAGetLastError());
+			LOG_FATAL("Server socket accept failed: %d", WSAGetLastError());
 			goto _loop_cleanup;
 		}
 		loop_cleanup = 1;
-		LOG_INFO("Accept successfull socket %d", clientSocket);
+		LOG_INFO("Server socket accept successfull socket %d", clientSocket);
 
-		LOG_DEBUG("Setup socket %d options", clientSocket);
+		LOG_DEBUG("Clien socket %d setup options", clientSocket);
 		int setsockoptRes = setsockopt(clientSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&config.recvTimeout, sizeof(config.recvTimeout));
 		if(setsockoptRes == SOCKET_ERROR) {
 			LOG_ERROR("setsockopt failed: %d", WSAGetLastError());

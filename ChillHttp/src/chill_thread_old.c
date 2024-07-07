@@ -100,6 +100,7 @@ void task_function(void* lpParam) {
 		}
 
 _loop_cleanup:
+	LOG_WARN("Loop cleanup task function");
 	switch (loop_cleanup) {
 		case 10000:
 			closesocket(socket);
@@ -122,7 +123,6 @@ _loop_cleanup:
 
 	data->httpcontext.isActive = false;
 	closesocket(socket);
-	WSACleanup(); // TODO idk if this is good here
-
 	free(data); // TODO better free of task context
+	//WSACleanup(); // TODO idk if this is good here
 }
