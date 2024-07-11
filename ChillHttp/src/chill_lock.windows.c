@@ -5,8 +5,15 @@ struct _ChillLock {
 	CRITICAL_SECTION cs;
 };
 
-void lockInit(ChillLock* lock) {
-	InitializeCriticalSection(&lock->cs);
+ChillLock* lockInit() {
+	// TODO error handleing
+	ChillLock* mallock = malloc(sizeof(ChillLock));
+	if (mallock == NULL) {
+		return;
+	}
+
+	InitializeCriticalSection(&mallock->cs);
+	return mallock;
 }
 
 void monitorEnter(ChillLock* lock) {
@@ -19,4 +26,5 @@ void monitorExit(ChillLock* lock) {
 
 void lockFree(ChillLock* lock) {
 	DeleteCriticalSection(&lock->cs);
+	free(lock);
 }

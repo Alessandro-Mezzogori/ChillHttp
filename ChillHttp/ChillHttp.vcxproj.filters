@@ -56,7 +56,7 @@
     <ClInclude Include="src\include\chill_socket.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\chill_thread_old.h">
+    <ClInclude Include="src\include\chill_task_function.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\include\chill_lua_boolean_array.h">
@@ -79,6 +79,9 @@
     </ClInclude>
     <ClInclude Include="src\include\concurrency\chill_concurrent_queue.h">
       <Filter>Header Files\concurrency</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\chill_connection_registry.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -109,7 +112,7 @@
     <ClCompile Include="src\chill_router.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\chill_thread_old.c">
+    <ClCompile Include="src\chill_task_function.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\chill_lua_api.c">
@@ -135,6 +138,12 @@
     </ClCompile>
     <ClCompile Include="src\concurrency\chill_concurrent_queue.c">
       <Filter>Source Files\concurrency</Filter>
+    </ClCompile>
+    <ClCompile Include="src\chill_connection_registry.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\chill_connection.windows.c">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

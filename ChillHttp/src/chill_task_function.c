@@ -1,4 +1,4 @@
-#include <chill_thread_old.h>
+#include <chill_task_function.h>
 #include <chill_lua_boolean_array.h>
 
 #pragma region Routes 
@@ -23,8 +23,8 @@ errno_t serve_file(const Config* config, HttpRequest* request, HttpResponse* res
 void task_function(void* lpParam) {
 	TaskContext* data = (TaskContext*)lpParam;
 	Config* config = data->config;
-	SOCKET socket = data->httpcontext.socket;
-	ConnectionData* connectionData = &data->httpcontext.connectionData;
+	SOCKET socket = data->httpcontext.connectionData->socket;
+	cSocket* connectionData = &data->httpcontext.connectionData;
 
 	LOG_DEBUG("Registering routes...");
 	size_t routeSize = 3;
@@ -37,9 +37,9 @@ void task_function(void* lpParam) {
 	// to do so we need a global registry for the current open connections
 	// probably the best way is having a concorrent map and a thread updating some info about the connection
 	// life the connection lifetime ecc... or if it is marked as a bad actor and forcibly closed
-	// ConnectionData could be a good starting point for the registry
+	// cSocket could be a good starting point for the registry
 
-	do {
+	//do {
 		int loop_cleanup = 0;
 		HttpRequest request;
 		HttpResponse response;
@@ -50,7 +50,9 @@ void task_function(void* lpParam) {
 		if (err != 0) {
 			LOG_ERROR("Error while receiving request: %d", err);
 			connectionData->connectionStatus = CONNECTION_STATUS_ABORTING;
-			break;
+			chill_socket_registry_remove(data->httpcontext.connectionData, data->registry);
+			return;
+			//break;
 		}
 		loop_cleanup = 1; // request rcved
 		LOG_DEBUG("Request rcved: %s", request.path);
@@ -60,6 +62,7 @@ void task_function(void* lpParam) {
 			// TODO short circuit with a stackalloced response 500
 			LOG_ERROR("Error while creating response: %d", responseCreateErr);
 			connectionData->connectionStatus = CONNECTION_STATUS_ABORTING;
+			chill_socket_registry_remove(data->httpcontext.connectionData, data->registry);
 			goto _loop_cleanup;
 		}
 		loop_cleanup = 2; // response created
@@ -100,29 +103,36 @@ void task_function(void* lpParam) {
 		}
 
 _loop_cleanup:
-	LOG_WARN("Loop cleanup task function");
-	switch (loop_cleanup) {
-		case 10000:
-			closesocket(socket);
-			socket = NULL;
-			WSACleanup();
-		case 3:
-			free(responseBuffer);
-		case 2:
-			freeHttpResponse(&response);
-		case 1:
-			freeHttpRequest(&request);
-		default:
-			break;
-	}
-	} while (connectionData->connectionStatus == CONNECTION_STATUS_CONNECTED);
+		LOG_WARN("Loop cleanup task function");
+		switch (loop_cleanup) {
+			case 10000:
+				// TODO signal socket error to cleanup
+				chill_socket_registry_remove(data->httpcontext.connectionData, data->registry);
+				chill_socket_free(data->httpcontext.connectionData);
+				data->httpcontext.connectionData = NULL;
+				WSACleanup(); // TODO replace
+				return;
+			case 3:
+				free(responseBuffer);
+			case 2:
+				freeHttpResponse(&response);
+			case 1:
+				freeHttpRequest(&request);
+			default:
+				break;
+		}
+	//} while (connectionData->connectionStatus == CONNECTION_STATUS_CONNECTED);
 
+	/*
+	chill_socket_registry_remove(data->httpcontext.connectionData, data->registry);
 	if (shutdown(socket, SD_SEND) == SOCKET_ERROR) {
 		LOG_FATAL("Socket {%d} Shutdown failed: %d", socket, WSAGetLastError());
 	}
 
 	data->httpcontext.isActive = false;
-	closesocket(socket);
-	free(data); // TODO better free of task context
+	chill_socket_free(data->httpcontext.connectionData);
 	//WSACleanup(); // TODO idk if this is good here
+	*/
+
+	free(data); // TODO better free of task context
 }

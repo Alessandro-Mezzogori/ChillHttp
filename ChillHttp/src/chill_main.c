@@ -1,19 +1,16 @@
-#define WIN32_LEAN_AND_MEAN
-
-#include <ws2tcpip.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <locale.h>
 
+#include <chill_connection.h>
 #include <chill_log.h>
 #include <chill_hashtable.h>
 #include <chill_config.h>
 #include <chill_http.h>
-#include <chill_thread_old.h>
 #include <chill_thread.h>
 #include <chill_threadpool.h>
-
-#pragma comment(lib, "ws2_32.lib") // Winsock library
+#include <chill_task_function.h>
+#include <chill_connection_registry.h>
 
 #define WinsockInitializedError 1
 #define SocketCreationError 2
@@ -29,20 +26,72 @@ void freeMainThreadData(PMTData data) {
 	free(data);
 }
 
+typedef struct _SocketRegistryThreadData {
+	ChillSocketRegistry* registry;
+	ChillThreadPool* threadPool;
+	Config* config;
+	int exit;
+} SocketRegistryThreadData;
+
+void socketRegistryFunction(void* data) {
+	SocketRegistryThreadData* tdata = (SocketRegistryThreadData*)data;
+	ChillSocketRegistry* reg = tdata->registry;
+
+	while (!tdata->exit) {
+		for (int i = 0; i < CHILL_SOCKET_REGISTRY_SIZE; i++) {
+			monitorEnter(reg->_lock);
+			cSocket* socket = reg->sockets[i];
+			if (socket != NULL && (socket->connectionStatus == CONNECTION_STATUS_CONNECTED || socket->connectionStatus == CONNECTION_STATUS_CREATED) && chill_socket_select(socket, 10) == 0) {
+				LOG_DEBUG("Task context creation");
+				TaskContext* taskContext = malloc(sizeof(TaskContext));
+				if (taskContext == NULL) {
+					LOG_ERROR("TaskContext allocation failed");
+					continue;
+				}
+
+				socket->connectionStatus = CONNECTION_STATUS_CONNECTED;
+				taskContext->config = tdata->config;
+				taskContext->httpcontext.connectionData = socket;
+				taskContext->httpcontext.isActive = TRUE;
+				taskContext->registry = reg;
+
+				ChillTaskInit taskinit = {
+					.data = taskContext,
+					.work = task_function,
+				};
+				ChillTask* task = chill_task_create(tdata->threadPool, &taskinit);
+				chill_task_submit(task);
+			}
+			monitorExit(reg->_lock);
+		}
+	}
+}
+
 int main() { 
 	ChillThreadPoolInit init = {
 		.max_thread = 2,
 		.min_thread = 1,
 	};
-	ChillThreadPool* pool;
+	ChillThreadPool* pool = NULL;
 	Config config;
-	struct WSAData wsa;
 	int cleanup = 0;
 	errno_t err = 0;
 	PMTData mtData = NULL;
 	struct addrinfo hints;
 	struct addrinfo *addrinfo = NULL;	
 	SOCKET serverSocket = NULL;
+	ChillSocketRegistry socketRegistry;
+	SocketRegistryThreadData socketRegistryThreadData = {
+		.registry = &socketRegistry,
+		.exit = 0,
+		.config = &config,
+	};
+	ChillThread* registryThread = NULL;
+	ChillThreadInit registryThreadInit = {
+		.data = (void*) &socketRegistryThreadData,
+		.delayStart = FALSE,
+		.work = socketRegistryFunction
+	};
 
 	setlocale(LC_ALL, "");
 	LOG_INFO("Loading configuration");
@@ -54,16 +103,27 @@ int main() {
 		LOG_FATAL("Threadpool initialization failed, err: %d", err);
 		goto _cleanup;
 	}
-	cleanup = 1; // threadpool initialized
+	cleanup = 2; // threadpool initialized
 	LOG_INFO("Threadpool initialized");
 
-	LOG_INFO("Initialiasing Winsock");
-	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
-		LOG_FATAL("Failed. error code %d", WSAGetLastError());
+	LOG_INFO("Socket registry initialization");
+	chill_socket_registry_init(&socketRegistry);
+	socketRegistryThreadData.registry = &socketRegistry;
+	socketRegistryThreadData.threadPool = pool;
+	socketRegistryThreadData.config = &config;
+
+	LOG_INFO("Starting socket registry thread");
+	err = chill_thread_init(&registryThreadInit, &registryThread);
+	if (err != 0) {
+		LOG_FATAL("Socket registry thread failed, err: %d", err);
 		goto _cleanup;
 	}
-	cleanup = 2; // winsock startup
-	LOG_INFO("Winsock initialized");
+	cleanup = 3;
+
+	if (chill_socket_global_setup() != 0) {
+		goto _cleanup;
+	}
+	cleanup = 4; // winsock startup
 
 	LOG_INFO("Initialiasing port");
 	memset(&hints, 0, sizeof(hints));
@@ -72,11 +132,10 @@ int main() {
 	hints.ai_protocol = IPPROTO_TCP;
 	hints.ai_flags = AI_PASSIVE;
 
-	if (getaddrinfo(NULL, config.port, &hints, &addrinfo) != 0) {
-		LOG_FATAL("getaddrinfo failed with error: %d", WSAGetLastError());
+	if (chill_getaddrinfo(NULL, config.port, &hints, &addrinfo) != 0) {
 		goto _cleanup;
 	}
-	cleanup = 3; // get addrinfo
+	cleanup = 5; // get addrinfo
 
 	LOG_INFO("Main thread data setup...");
 	mtData = malloc(sizeof(MTData));
@@ -86,29 +145,29 @@ int main() {
 	}
 	mtData->config = config;
 	mtData->isRunning = TRUE;
-	cleanup = 4; // main thread data allocated
+	mtData->serverSocket = NULL;
+	cleanup = 6; // main thread data allocated
 	LOG_INFO("Main thread setup done");
 
 	LOG_INFO("Server socket creation...");
-	mtData->serverSocket = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
+	mtData->serverSocket = chill_socket(addrinfo);
 	serverSocket = mtData->serverSocket;
-	if (serverSocket == INVALID_SOCKET) {
-		LOG_FATAL("Could not create socket: %d", WSAGetLastError());
+	if (serverSocket == NULL) {
 		goto _cleanup;
 	}
-	cleanup = 5; // server socket created
+	cleanup = 7; // server socket created
 	LOG_INFO("Server socket created");
 
 	LOG_INFO("Server socket binding");
-	if(bind(serverSocket, addrinfo->ai_addr, (int)addrinfo->ai_addrlen) == SOCKET_ERROR) {
-		LOG_FATAL("Bind failed with error: %d", WSAGetLastError());
+	if(chill_socket_bind(serverSocket, addrinfo) != 0) {
+		LOG_FATAL("Bind failed with error");
 		goto _cleanup;
 	}
-	cleanup = 6; // server socket bind
+	cleanup = 8; // server socket bind
 
 	LOG_INFO("Server socket listening");
-	if (listen(serverSocket, config.maxConcurrentThreads) == SOCKET_ERROR) {
-		LOG_FATAL("Listened failed: %d", WSAGetLastError());
+	if (chill_socket_listen(serverSocket, config.maxConcurrentThreads) != 0) {
+		LOG_FATAL("Listened failed");
 		goto _cleanup;
 	}
 
@@ -116,22 +175,24 @@ int main() {
 	while (TRUE) {
 		int loop_cleanup = 0;
 		TaskContext* taskContext = NULL;
-		SOCKET clientSocket = accept(serverSocket, NULL, NULL);
-		if(clientSocket == INVALID_SOCKET) {
-			// TODO handle error
-			LOG_FATAL("Server socket accept failed: %d", WSAGetLastError());
+		cSocket* clientSocket = chill_socket_accept(serverSocket, NULL, NULL);
+		if(clientSocket == NULL) {
+			LOG_FATAL("Server socket accept failed");
 			goto _loop_cleanup;
 		}
 		loop_cleanup = 1;
-		LOG_INFO("Server socket accept successfull socket %d", clientSocket);
+		LOG_INFO("Server socket accept successfull socket %d", clientSocket->socket);
 
-		LOG_DEBUG("Clien socket %d setup options", clientSocket);
-		int setsockoptRes = setsockopt(clientSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&config.recvTimeout, sizeof(config.recvTimeout));
-		if(setsockoptRes == SOCKET_ERROR) {
-			LOG_ERROR("setsockopt failed: %d", WSAGetLastError());
+		LOG_DEBUG("Clien socket %d setup options", clientSocket->socket);
+		if(chill_socket_settimeout(clientSocket, config.recvTimeout) != 0) {
+			LOG_ERROR("setsockopt failed");
 			goto _loop_cleanup;
 		}
 
+		LOG_INFO("Adding socket %d to socket registry", clientSocket->socket);
+		chill_socket_registry_add(clientSocket, &socketRegistry);
+
+		/*
 		LOG_DEBUG("Task context creation");
 		taskContext = malloc(sizeof(TaskContext));
 		if (taskContext == NULL) {
@@ -140,9 +201,9 @@ int main() {
 		}
 		loop_cleanup = 2;
 
+		clientSocket->connectionStatus = CONNECTION_STATUS_CONNECTED;
 		taskContext->config = &config;
-		taskContext->httpcontext.connectionData.connectionStatus = CONNECTION_STATUS_CONNECTED;
-		taskContext->httpcontext.socket = clientSocket;
+		taskContext->httpcontext.connectionData = clientSocket;
 		taskContext->httpcontext.isActive = TRUE;
 
 		ChillTaskInit taskinit = {
@@ -151,6 +212,7 @@ int main() {
 		};
 		ChillTask* task = chill_task_create(pool, &taskinit);
 		chill_task_submit(task);
+		*/
 
 		// TODO error to client
 		// TODO registry for all open connections
@@ -164,7 +226,7 @@ int main() {
 			case 2:
 				free(taskContext);
 			case 1:
-				closesocket(clientSocket);
+				chill_socket_free(clientSocket);
 			default:
 				break;
 		}
@@ -173,15 +235,22 @@ int main() {
 
 _cleanup: 
 	switch (cleanup) {
-		case 4:
+		case 7:
+			chill_socket_free(mtData->serverSocket);
+		case 6:
 			mtData->isRunning = FALSE;
 			freeMainThreadData(mtData);
-		case 3:
+		case 5:
 			freeaddrinfo(addrinfo);
-		case 2:
+		case 4:
 			WSACleanup();
-		case 1:
+		case 3:
+			chill_thread_join(registryThread, -1);
+			chill_thread_cleanup(&registryThread);
+		case 2:
 			chill_threadpool_free(pool);
+		case 1:
+			chill_socket_registry_free(&socketRegistry);
 		default:
 			break;
 	}

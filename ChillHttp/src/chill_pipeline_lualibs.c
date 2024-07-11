@@ -194,7 +194,7 @@ static connection_newindex(lua_State* L) {
 
 static int connection_index(lua_State* L) {
 	ConnectionDataWrapper* wrapper = (ConnectionDataWrapper*) luaL_checkudata(L, 1, PIPELINE_CONNECTIONDATA_META);
-	ConnectionData* connection = wrapper->connectionData;
+	cSocket* connection = wrapper->connectionData;
 
 	const char* key = luaL_checkstring(L, -1);
 
@@ -219,7 +219,7 @@ static int connection_index(lua_State* L) {
 
 static int connection_close(lua_State* L) {
 	ConnectionDataWrapper* wrapper = (ConnectionDataWrapper*) luaL_checkudata(L, 1, PIPELINE_CONNECTIONDATA_META);
-	ConnectionData* connection = wrapper->connectionData;
+	cSocket* connection = wrapper->connectionData;
 
 	connection->connectionStatus = CONNECTION_STATUS_CLOSING;
 	return 0;

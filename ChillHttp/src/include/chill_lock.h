@@ -4,7 +4,7 @@
 
 typedef struct _ChillLock ChillLock;
 
-void lockInit(ChillLock* lock);
+ChillLock* lockInit();
 void monitorEnter(ChillLock* lock);
 void monitorExit(ChillLock* lock);
 void lockFree(ChillLock* lock);

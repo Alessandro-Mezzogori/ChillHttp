@@ -14,7 +14,7 @@ typedef struct PipelineContextInit PipelineContextInit;
 struct PipelineContextInit {
 	HttpRequest* request;
 	HttpResponse* response;
-	ConnectionData* connectionData;
+	cSocket* connectionData;
 	Config* const config;
 
 	Route* routes;

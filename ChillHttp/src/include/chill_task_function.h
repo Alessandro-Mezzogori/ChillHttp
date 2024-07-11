@@ -14,24 +14,25 @@
 #include <chill_config.h>
 #include <chill_pipeline.h>
 #include <chill_connection.h>
+#include <chill_connection_registry.h>
 
 typedef struct MainThreadData MTData, *PMTData;
 typedef struct _HttpContext HttpContext;
 typedef struct _TaskContext TaskContext;
 
 struct _HttpContext {
-	SOCKET socket;
+	cSocket* connectionData; 
 	bool isActive;
-	ConnectionData connectionData;
 };
 
 struct _TaskContext {
+	ChillSocketRegistry* registry;
 	HttpContext httpcontext;
 	const Config* config;
 };
 
 struct MainThreadData {
-	SOCKET serverSocket;
+	cSocket* serverSocket;
 	BOOL isRunning;
 	Config config;
 };

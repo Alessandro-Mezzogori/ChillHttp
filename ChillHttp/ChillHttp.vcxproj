@@ -142,6 +142,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="src\include\chill_cbuffer.h" />
+    <ClInclude Include="src\include\chill_connection_registry.h" />
     <ClInclude Include="src\include\chill_errors.h" />
     <ClInclude Include="src\include\chill_config.h" />
     <ClInclude Include="src\include\chill_connection.h" />
@@ -158,13 +159,15 @@
     <ClInclude Include="src\include\chill_socket.h" />
     <ClInclude Include="src\include\chill_string.h" />
     <ClInclude Include="src\include\chill_thread.h" />
-    <ClInclude Include="src\include\chill_thread_old.h" />
+    <ClInclude Include="src\include\chill_task_function.h" />
     <ClInclude Include="src\include\chill_threadpool.h" />
     <ClInclude Include="src\include\concurrency\chill_concurrent_queue.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\chill_cbuffer.c" />
     <ClCompile Include="src\chill_config.c" />
+    <ClCompile Include="src\chill_connection.windows.c" />
+    <ClCompile Include="src\chill_connection_registry.c" />
     <ClCompile Include="src\chill_lock.windows.c" />
     <ClCompile Include="src\chill_lua.c" />
     <ClCompile Include="src\chill_hashtable.c" />
@@ -178,7 +181,7 @@
     <ClCompile Include="src\chill_string.c" />
     <ClCompile Include="src\chill_thread.windows.c" />
     <ClCompile Include="src\chill_threadpool.old.c" />
-    <ClCompile Include="src\chill_thread_old.c" />
+    <ClCompile Include="src\chill_task_function.c" />
     <ClCompile Include="src\chill_threadpool.windows.c" />
     <ClCompile Include="src\concurrency\chill_concurrent_queue.c" />
   </ItemGroup>

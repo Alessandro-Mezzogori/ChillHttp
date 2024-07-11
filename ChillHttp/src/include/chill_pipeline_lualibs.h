@@ -65,7 +65,7 @@ struct ConfigWrapper {
 };
 
 struct ConnectionDataWrapper {
-	ConnectionData* connectionData;
+	cSocket* connectionData;
 };
 
 
@@ -78,7 +78,7 @@ struct ContextWrapper {
 	// TODO: make these const
 	HttpRequest* request;
 	HttpResponse* response;
-	ConnectionData* connectionData;
+	cSocket* connectionData;
 
 	Config* config;
 
