@@ -18,33 +18,21 @@
     <Filter Include="Header Files\concurrency">
       <UniqueIdentifier>{125528ae-bb3d-4516-bd50-47c8402fabe4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\common">
+      <UniqueIdentifier>{ad8c329a-026b-496f-972c-d400e77d243f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\lua">
+      <UniqueIdentifier>{01289850-e2a7-46fb-ab91-49355153f05e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\include\chill_cbuffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\chill_errors.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\include\chill_config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\include\chill_connection.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\chill_lua.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\chill_hashtable.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\include\chill_http.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\chill_list.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\chill_log.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\include\chill_pipeline.h">
@@ -59,29 +47,47 @@
     <ClInclude Include="src\include\chill_task_function.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\chill_lua_boolean_array.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\chill_string.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\chill_pipeline_lualibs.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\chill_threadpool.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\chill_thread.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\include\chill_lock.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\include\concurrency\chill_concurrent_queue.h">
       <Filter>Header Files\concurrency</Filter>
     </ClInclude>
     <ClInclude Include="src\include\chill_connection_registry.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\chill_cbuffer.h">
+      <Filter>Header Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\chill_hashtable.h">
+      <Filter>Header Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\chill_log.h">
+      <Filter>Header Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\chill_lock.h">
+      <Filter>Header Files\concurrency</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\chill_thread.h">
+      <Filter>Header Files\concurrency</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\chill_threadpool.h">
+      <Filter>Header Files\concurrency</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\chill_lua.h">
+      <Filter>Header Files\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\chill_lua_boolean_array.h">
+      <Filter>Header Files\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\chill_pipeline_lualibs.h">
+      <Filter>Header Files\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\chill_errors.h">
+      <Filter>Header Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\chill_list.h">
+      <Filter>Header Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\chill_string.h">
+      <Filter>Header Files\common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
