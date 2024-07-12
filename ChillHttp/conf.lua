@@ -10,5 +10,8 @@ conf = {
 
     -- # RECV TIMEOUT IN SECONDS
     RECV_TIMEOUT=20,
+
+    -- # Pipeline
+    PIPELINE_FILE_PATH="pipeline.lua"
 }
 

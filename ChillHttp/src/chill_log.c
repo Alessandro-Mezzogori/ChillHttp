@@ -1,5 +1,6 @@
 #include <chill_log.h>
 
+// TODO make it a runtime variable
 //const enum LOG_LEVEL log_runtime_level = LL_TRACE;
 const enum LOG_LEVEL log_runtime_level = LL_TRACE;
 const char* log_level_strings[] = {

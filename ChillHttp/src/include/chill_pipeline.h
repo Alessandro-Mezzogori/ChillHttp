@@ -7,8 +7,6 @@
 #include <chill_lua.h>
 #include <chill_pipeline_lualibs.h>
 
-#define PIPELINE_SCRIPT "pipeline.lua"
-
 typedef struct PipelineContextInit PipelineContextInit;
 
 struct PipelineContextInit {

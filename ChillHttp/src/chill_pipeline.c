@@ -22,7 +22,7 @@ errno_t runPipeline(PipelineContextInit* init) {
 	luaL_openlibs(L);
 	lua_openlibs_pipeline(L);
 
-	int r = luaL_dofile(L, PIPELINE_SCRIPT);
+	int r = luaL_dofile(L, init->config->pipelineFilePath);
 	if (r != LUA_OK) {
 		LOG_ERROR("Error: %s", lua_tostring(L, -1));
 		lua_close(L);
