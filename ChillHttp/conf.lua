@@ -12,6 +12,7 @@ conf = {
     RECV_TIMEOUT=20,
 
     -- # Pipeline
-    PIPELINE_FILE_PATH="pipeline.lua"
+    PIPELINE_FILE_PATH="pipeline.lua",
+    ROUTES_FILE_PATH="routes.lua",
 }
 

@@ -3,16 +3,6 @@
 
 #pragma region Routes 
 
-errno_t test_route(const Config* config, HttpRequest* request, HttpResponse* response) {
-	LOG_INFO("[RouteHandler]");
-	return setHttpResponse(response, request->version, 203, strdup("test endpoint"));
-}
-
-errno_t test_route2(const Config* config, HttpRequest* request, HttpResponse* response) {
-	LOG_INFO("[RouteHandler]");
-	return setHttpResponse(response, request->version, 203, strdup("test endpoint 2"));
-}
-
 errno_t serve_file(const Config* config, HttpRequest* request, HttpResponse* response) {
 	LOG_INFO("[RouteHandler]");
 	return serveFile(config->servingFolder, config->servingFolderLen, request, response);
@@ -31,8 +21,6 @@ void task_function(void* lpParam) {
 	Route routes[3];
 
 	// ### MALLOC ###
-	registerRoute(routes, "/test", HTTP_POST, test_route);
-	registerRoute(routes + 1, "/test2", HTTP_POST, test_route2);
 	registerRoute(routes + 2, "*", HTTP_GET, serve_file);
 
 	// TODO remove do while in task worker function

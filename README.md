@@ -13,9 +13,10 @@ while being extendible via LUA scripting and configuration
 - [ ] Cleaning and adding more functionalities OOB with the lua api
 - [ ] Basic attack protection ( slowris and generic high load ddos )
 - [ ] dynamic routing setup trough lua:
-- [ ] args for static files:
-	- [ ] conf.lua
-	- [ ] pipeline.lua
-	- [ ] serving folder
-	- [ ] ecc...
+	- [ ] parameter routing, ex: offers/{id}[/...]
+- [x] args for static files:
+	- [x] conf.lua
+	- [x] pipeline.lua
+	- [x] serving folder
 - [ ] openapi support from lua
+- [ ] docs

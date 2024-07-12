@@ -8,7 +8,7 @@
 #include <chill_lua.h>
 
 #define MAX_CONFIG_LINE_LEN 256
-#define MAX_PIPELINE_FILEPATH_LEN 256
+#define CHILL_CONFIG_FILEPATH_LEN 256
 #define MAX_SERVING_FOLDER_LEN 256
 #define MAX_CONFIG_PORT_LEN 6
 
@@ -29,7 +29,8 @@ typedef struct _Config {
 	int maxConcurrentThreads;
 
 	// ##### PIPELINE #####
-	char pipelineFilePath[MAX_PIPELINE_FILEPATH_LEN];
+	char pipelineFilePath[CHILL_CONFIG_FILEPATH_LEN];
+	char routesFilePath[CHILL_CONFIG_FILEPATH_LEN];
 
 	// ##### CACHE #####
 

@@ -83,6 +83,9 @@
     <ClInclude Include="src\include\chill_connection_registry.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\include\chill_lua_routes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\chill_cbuffer.c">
@@ -145,10 +148,14 @@
     <ClCompile Include="src\chill_connection.windows.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\chill_lua_routes.c" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="conf.lua" />
     <CopyFileToFolders Include="lua542\lua54.dll" />
     <CopyFileToFolders Include="pipeline.lua" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="routes.lua" />
   </ItemGroup>
 </Project>
