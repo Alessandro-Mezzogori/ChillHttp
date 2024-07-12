@@ -5,8 +5,9 @@ Used to explore the complexities in high troughput situations of a webserver
 while being extendible via LUA scripting and configuration
 
 ## WIP
-- [ ] [TECH] Thread per request architecture backed by a threadpool ( aka task based work )
+- [x] [TECH] Thread per request architecture backed by a threadpool ( aka task based work )
 - [ ] [TECH] Cross platform ( main targets are ubuntu and windows )
+	- at the moment the first step is identifying the platform specific code and isolating in different files .windows
 - [ ] [TECH] Create a lua setup helper functions 
 - [ ] Lsp lua support for ChillHttp lua structures 
 - [ ] Cleaning and adding more functionalities OOB with the lua api
