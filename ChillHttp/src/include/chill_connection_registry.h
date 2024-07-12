@@ -7,6 +7,10 @@
 
 #define CHILL_SOCKET_REGISTRY_SIZE 64
 
+typedef struct _ChillSocketRegistryEntry {
+	cSocket* socket;
+};
+
 
 typedef struct _ChillSocketRegistry {
 	size_t nsocks;

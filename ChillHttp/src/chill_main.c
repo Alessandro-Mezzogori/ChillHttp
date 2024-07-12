@@ -41,7 +41,14 @@ void socketRegistryFunction(void* data) {
 		for (int i = 0; i < CHILL_SOCKET_REGISTRY_SIZE; i++) {
 			monitorEnter(reg->_lock);
 			cSocket* socket = reg->sockets[i];
-			if (socket != NULL && (socket->connectionStatus == CONNECTION_STATUS_CONNECTED || socket->connectionStatus == CONNECTION_STATUS_CREATED) && chill_socket_select(socket, 10) == 0) {
+			if (
+				socket != NULL 
+				&& (
+					socket->connectionStatus == CONNECTION_STATUS_CONNECTED 
+					|| socket->connectionStatus == CONNECTION_STATUS_CREATED
+					) 
+				&& chill_socket_select(socket, 10) == 0
+			) {
 				LOG_DEBUG("Task context creation");
 				TaskContext* taskContext = malloc(sizeof(TaskContext));
 				if (taskContext == NULL) {
@@ -49,7 +56,10 @@ void socketRegistryFunction(void* data) {
 					continue;
 				}
 
-				socket->connectionStatus = CONNECTION_STATUS_CONNECTED;
+				if (socket->connectionStatus == CONNECTION_STATUS_CREATED) {
+					socket->connectionStatus = CONNECTION_STATUS_CONNECTED;
+				}
+
 				taskContext->config = tdata->config;
 				taskContext->httpcontext.connectionData = socket;
 				taskContext->httpcontext.isActive = TRUE;

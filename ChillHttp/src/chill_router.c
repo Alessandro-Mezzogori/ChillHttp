@@ -130,14 +130,13 @@ errno_t serveFile(const char* servingFolder, size_t servingFolderLen, HttpReques
 	}
 
 	setHttpResponse(response, request->version, 200, fileContent);
-	goto _exit;
+	free(fileContent);
+	return 0;
 
 _exit_with_cleanup:
 	free(fileContent);
 _exit_with_error:
 	return -1;
-_exit:
-	return 0;
 }
 
 errno_t serveError(const char* servingFolder, size_t servingFolderLen, HttpRequest* request, HttpResponse* response) {

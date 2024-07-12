@@ -21,7 +21,8 @@ void chill_socket_registry_add(cSocket* socket, ChillSocketRegistry* reg) {
 void chill_socket_registry_remove(cSocket* socket, ChillSocketRegistry* reg) {
 	monitorEnter(reg->_lock);
 	for (int i = 0; i < CHILL_SOCKET_REGISTRY_SIZE; i++) {
-		if (reg->sockets[i]->socket == socket->socket) {
+		cSocket* regSocket = reg->sockets[i];
+		if (regSocket != NULL && regSocket->socket == socket->socket) {
 			reg->sockets[i] = NULL;
 			reg->nsocks--;
 			break;

@@ -29,6 +29,8 @@ void task_function(void* lpParam) {
 	LOG_DEBUG("Registering routes...");
 	size_t routeSize = 3;
 	Route routes[3];
+
+	// ### MALLOC ###
 	registerRoute(routes, "/test", HTTP_POST, test_route);
 	registerRoute(routes + 1, "/test2", HTTP_POST, test_route2);
 	registerRoute(routes + 2, "*", HTTP_GET, serve_file);
@@ -89,6 +91,7 @@ void task_function(void* lpParam) {
 		if (buildErr != 0) {
 			LOG_ERROR("Error while building response: %d", buildErr);
 			connectionData->connectionStatus = CONNECTION_STATUS_ABORTING;
+			chill_socket_registry_remove(data->httpcontext.connectionData, data->registry);
 			goto _loop_cleanup;
 		}
 		loop_cleanup = 3; // built http response
@@ -99,6 +102,7 @@ void task_function(void* lpParam) {
 			LOG_FATAL("Socket {%d} send failed: %d", socket, WSAGetLastError());
 			loop_cleanup = 10000; // socket error
 			connectionData->connectionStatus = CONNECTION_STATUS_ABORTING;
+			chill_socket_registry_remove(data->httpcontext.connectionData, data->registry);
 			goto _loop_cleanup;
 		}
 
