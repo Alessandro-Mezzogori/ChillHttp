@@ -7,8 +7,6 @@
 #include <stdlib.h>
 #include <chill_lua.h>
 
-#define CONFIG_PATH_TEXT "conf.txt"
-#define CONFIG_PATH_LUA "conf.lua"
 #define MAX_CONFIG_LINE_LEN 256
 #define MAX_CONFIG_PORT_LEN 6
 
@@ -39,5 +37,5 @@ typedef struct _Config {
 
 } Config;
 
-errno_t loadConfig(Config* config);
+errno_t chill_load_config(const char* str, Config* config);
 

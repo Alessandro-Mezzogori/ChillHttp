@@ -16,6 +16,8 @@
 #define SocketCreationError 2
 #define ListenError 3
 
+#define CONFIG_PATH_LUA "conf.lua"
+
 void freeMainThreadData(PMTData data) {
 	if (data == NULL) {
 		return;
@@ -105,7 +107,11 @@ int main() {
 
 	setlocale(LC_ALL, "");
 	LOG_INFO("Loading configuration");
-	loadConfig(&config);
+	err = chill_load_config(CONFIG_PATH_LUA, &config);
+	if (err != 0) {
+		LOG_FATAL("Loading configuration failed, err: %d", err);
+		goto _cleanup;
+	}
 
 	LOG_INFO("Threadpool initialization");
 	err = chill_threadpool_init(&pool, &init);
