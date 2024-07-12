@@ -1,4 +1,4 @@
-#include <chill_lua_boolean_array.h>
+#include <chill_lua_bit_array.h>
 
 #define BITS_PER_WORD 32
 #define I_WORD(i) ((unsigned)i / BITS_PER_WORD)

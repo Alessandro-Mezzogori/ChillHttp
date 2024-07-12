@@ -24,6 +24,12 @@
     <Filter Include="Header Files\lua">
       <UniqueIdentifier>{01289850-e2a7-46fb-ab91-49355153f05e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\common">
+      <UniqueIdentifier>{d64c7fdc-29fe-49aa-b423-5cc0dbcc0b82}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\lua">
+      <UniqueIdentifier>{59846b9c-8b6d-4bf3-9cfb-05cf50004efa}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\include\chill_config.h">
@@ -74,7 +80,7 @@
     <ClInclude Include="src\include\chill_lua.h">
       <Filter>Header Files\lua</Filter>
     </ClInclude>
-    <ClInclude Include="src\include\chill_lua_boolean_array.h">
+    <ClInclude Include="src\include\chill_lua_bit_array.h">
       <Filter>Header Files\lua</Filter>
     </ClInclude>
     <ClInclude Include="src\include\chill_pipeline_lualibs.h">
@@ -91,22 +97,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\chill_cbuffer.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\chill_config.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\chill_lua.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\chill_hashtable.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\chill_http.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\chill_log.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\chill_main.c">
@@ -121,27 +115,6 @@
     <ClCompile Include="src\chill_task_function.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\chill_lua_api.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\chill_string.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\chill_pipeline_lualibs.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\chill_threadpool.windows.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\chill_thread.windows.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\chill_lock.windows.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\chill_threadpool.old.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\concurrency\chill_concurrent_queue.c">
       <Filter>Source Files\concurrency</Filter>
     </ClCompile>
@@ -150,6 +123,36 @@
     </ClCompile>
     <ClCompile Include="src\chill_connection.windows.c">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\chill_lock.windows.c">
+      <Filter>Source Files\concurrency</Filter>
+    </ClCompile>
+    <ClCompile Include="src\chill_thread.windows.c">
+      <Filter>Source Files\concurrency</Filter>
+    </ClCompile>
+    <ClCompile Include="src\chill_threadpool.windows.c">
+      <Filter>Source Files\concurrency</Filter>
+    </ClCompile>
+    <ClCompile Include="src\chill_cbuffer.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\chill_hashtable.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\chill_log.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\chill_string.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\chill_lua.c">
+      <Filter>Source Files\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="src\chill_lua_bit_array.c">
+      <Filter>Source Files\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="src\chill_pipeline_lualibs.c">
+      <Filter>Source Files\lua</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

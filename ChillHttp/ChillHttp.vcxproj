@@ -152,7 +152,7 @@
     <ClInclude Include="src\include\chill_http.h" />
     <ClInclude Include="src\include\chill_list.h" />
     <ClInclude Include="src\include\chill_log.h" />
-    <ClInclude Include="src\include\chill_lua_boolean_array.h" />
+    <ClInclude Include="src\include\chill_lua_bit_array.h" />
     <ClInclude Include="src\include\chill_pipeline.h" />
     <ClInclude Include="src\include\chill_pipeline_lualibs.h" />
     <ClInclude Include="src\include\chill_router.h" />
@@ -173,14 +173,13 @@
     <ClCompile Include="src\chill_hashtable.c" />
     <ClCompile Include="src\chill_http.c" />
     <ClCompile Include="src\chill_log.c" />
-    <ClCompile Include="src\chill_lua_api.c" />
+    <ClCompile Include="src\chill_lua_bit_array.c" />
     <ClCompile Include="src\chill_main.c" />
     <ClCompile Include="src\chill_pipeline.c" />
     <ClCompile Include="src\chill_pipeline_lualibs.c" />
     <ClCompile Include="src\chill_router.c" />
     <ClCompile Include="src\chill_string.c" />
     <ClCompile Include="src\chill_thread.windows.c" />
-    <ClCompile Include="src\chill_threadpool.old.c" />
     <ClCompile Include="src\chill_task_function.c" />
     <ClCompile Include="src\chill_threadpool.windows.c" />
     <ClCompile Include="src\concurrency\chill_concurrent_queue.c" />
