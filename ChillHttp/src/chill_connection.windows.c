@@ -114,7 +114,7 @@ errno_t chill_socket_select(const cSocket* socket, size_t millisecs) {
 	FD_ZERO(&fs);
 	FD_SET(socket->socket, &fs);
 	messageAvailable = select(FD_SETSIZE, &fs, NULL, NULL, &tv);
-	if (messageAvailable) {
+	if (messageAvailable > 0) {
 		return 0;
 	}
 
