@@ -23,7 +23,7 @@ void task_function(void* lpParam) {
 	TaskContext* data = (TaskContext*)lpParam;
 	Config* config = data->config;
 	SOCKET socket = data->httpcontext.connectionData->socket;
-	cSocket* connectionData = &data->httpcontext.connectionData;
+	cSocket* connectionData = data->httpcontext.connectionData;
 
 	LOG_DEBUG("Registering routes...");
 	size_t routeSize = 3;
@@ -56,7 +56,7 @@ void task_function(void* lpParam) {
 		LOG_ERROR("Error while creating response: %d", responseCreateErr);
 		connectionData->connectionStatus = CONNECTION_STATUS_ABORTING;
 		chill_socket_registry_remove(data->httpcontext.connectionData, data->registry);
-		goto _loop_cleanup;
+		goto _cleanup;
 	}
 	loop_cleanup = 2; // response created
 
@@ -83,7 +83,7 @@ void task_function(void* lpParam) {
 		LOG_ERROR("Error while building response: %d", buildErr);
 		connectionData->connectionStatus = CONNECTION_STATUS_ABORTING;
 		chill_socket_registry_remove(data->httpcontext.connectionData, data->registry);
-		goto _loop_cleanup;
+		goto _cleanup;
 	}
 	loop_cleanup = 3; // built http response
 
@@ -94,11 +94,11 @@ void task_function(void* lpParam) {
 		loop_cleanup = 10000; // socket error
 		connectionData->connectionStatus = CONNECTION_STATUS_ABORTING;
 		chill_socket_registry_remove(data->httpcontext.connectionData, data->registry);
-		goto _loop_cleanup;
+		goto _cleanup;
 	}
 
-_loop_cleanup:
-	LOG_WARN("Loop cleanup task function");
+_cleanup:
+	LOG_TRACE("Task cleanup");
 	switch (loop_cleanup) {
 		case 10000:
 			// TODO signal socket error to cleanup
@@ -109,6 +109,7 @@ _loop_cleanup:
 			return;
 		case 3:
 			free(responseBuffer);
+			responseBuffer = NULL;
 		case 2:
 			freeHttpResponse(&response);
 		case 1:
