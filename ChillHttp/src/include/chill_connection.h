@@ -19,6 +19,7 @@ typedef enum {
 	CONNECTION_STATUS_CLOSED	= 3,
 	CONNECTION_STATUS_ABORTING	= 4,
 	CONNECTION_STATUS_CREATED	= 5,
+	CONNECTION_STATUS_WORKING	= 6,
 } ConnectionStatus;
 
 typedef struct _cSocket {

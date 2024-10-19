@@ -51,15 +51,13 @@ void socketRegistryFunction(void* data) {
 					) 
 				&& chill_socket_select(socket, 10) == 0
 			) {
+				socket->connectionStatus = CONNECTION_STATUS_WORKING;
+
 				LOG_DEBUG("Task context creation");
 				TaskContext* taskContext = malloc(sizeof(TaskContext));
 				if (taskContext == NULL) {
 					LOG_ERROR("TaskContext allocation failed");
 					continue;
-				}
-
-				if (socket->connectionStatus == CONNECTION_STATUS_CREATED) {
-					socket->connectionStatus = CONNECTION_STATUS_CONNECTED;
 				}
 
 				taskContext->config = tdata->config;
